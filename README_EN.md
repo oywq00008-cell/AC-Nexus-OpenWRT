@@ -5,7 +5,8 @@ The Broadlink fully automatic air conditioning control plugin for OpenWRT router
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenWRT](https://img.shields.io/badge/OpenWRT-21%2B-blue.svg)]()
 [![Python](https://img.shields.io/badge/Python-3.8%2B-green.svg)]()
-
+![Global settings](全局设置.png)
+![control Panel](控制面板.png)
 ## ✨ Features
 
 - 🎛️ **LuCI control panel** — Web UI for AC control, device config, log viewing
