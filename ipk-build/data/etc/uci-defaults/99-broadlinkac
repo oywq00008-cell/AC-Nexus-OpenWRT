@@ -22,8 +22,6 @@ cat > /root/.ac_controller/config.json << 'JSONEOF'
     "name": "LOCNAME"
   },
   "typhoon_provider": "TP",
-  "typhoon_alert_km": ALERTKM,
-  "typhoon_alert_enabled": ALERTEN,
   "typhoon_ac_off": ACOFF,
   "appearance_mode": "system",
   "devices": {},
@@ -39,8 +37,6 @@ sed -i "s/LAT/$(get location_lat)/" /root/.ac_controller/config.json
 sed -i "s/LON/$(get location_lon)/" /root/.ac_controller/config.json
 sed -i "s/LOCNAME/$(get location_name)/" /root/.ac_controller/config.json
 sed -i "s/TP/$(get typhoon_provider)/" /root/.ac_controller/config.json
-sed -i "s/ALERTKM/$(get typhoon_alert_km)/" /root/.ac_controller/config.json
-sed -i "s/ALERTEN/$(getb typhoon_alert_enabled)/" /root/.ac_controller/config.json
 sed -i "s/ACOFF/$(getb typhoon_ac_off)/" /root/.ac_controller/config.json
 
 echo "BroadlinkAC config initialized"

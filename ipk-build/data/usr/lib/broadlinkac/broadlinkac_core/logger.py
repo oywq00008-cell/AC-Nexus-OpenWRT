@@ -60,7 +60,7 @@ def get_last_ac_state():
         return {"power": "off", "mode": "cool", "temp": 26}
 
     ON_WORDS = ("手动开机", "定时开机", "自动调温", "开机")
-    OFF_WORDS = ("手动关机", "定时关机", "自动关机", "关机")
+    OFF_WORDS = ("手动关机", "定时关机", "自动关机", "台风自动关机", "关机")
 
     lines = log_file.read_text(encoding="utf-8").split("\n")
     for line in reversed(lines):

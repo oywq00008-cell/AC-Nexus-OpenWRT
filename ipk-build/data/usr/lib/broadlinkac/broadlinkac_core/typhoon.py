@@ -111,32 +111,30 @@ def calc_distance(lat1, lon1, lat2, lon2):
 
 def typhoon_threat_distance(provider=None):
     """评估最近风暴/飓风距离 (km)。
-    Agent 可直接调用：<100km 即应关机。返回 (距离, 名称)。
-    provider 不传则走 config 当前设置。
-    任何异常均返回 (99999, "")，不抛异常。
+    Agent / 定时任务 / status API 共用此函数。
+    强制走 _ty_cache（_typhoon_loop 每 30min 拉一次写进来的），
+    缓存空才现场拉一次兜底，再空就返回 (99999, "")。
+    返回 (距离, 名称)。任何异常均返回 (99999, "")，不抛异常。
     """
     import broadlinkac_core.config as _cfg
     try:
-        provider = provider or _cfg.config.get("typhoon_provider", "nmc")
         lat = _cfg.LOCATION["lat"]
         lon = _cfg.LOCATION["lon"]
+        cache = get_cached()
+        if not cache:
+            # 兜底：刚启动/网络失败的 30min 空档期
+            fetch_and_cache()
+            cache = get_cached()
+        if not cache:
+            return 99999, ""
         min_dist, name = 99999, ""
-
-        if provider == "nhc":
-            storms = fetch_nhc_storms()
-            for s in storms:
-                d = s.get("detail", {})
-                if d:
-                    dist = calc_distance(lat, lon, d["lat"], d["lon"])
-                    if dist < min_dist:
-                        min_dist, name = dist, d["cn"]
-        else:
-            for t in fetch_typhoons():
-                d = fetch_typhoon_detail(t["id"])
-                if d:
-                    dist = calc_distance(lat, lon, d["lat"], d["lon"])
-                    if dist < min_dist:
-                        min_dist, name = dist, d["cn"]
+        for t in cache:
+            d = t.get("detail")
+            if not d:
+                continue
+            dist = calc_distance(lat, lon, d["lat"], d["lon"])
+            if dist < min_dist:
+                min_dist, name = dist, d["cn"]
         return min_dist, name
     except Exception as e:
         print(f"[威胁评估] {e}")
@@ -221,13 +219,23 @@ def get_cached():
     return _ty_cache
 
 
-def judge_and_shutdown(write_log_func, ty_alert_muted=False, ty_ac_off_sent=False):
-    alerts = []
+def judge_and_shutdown(write_log_func, _ty_ac_off_sent_unused=False):
+    """遍历 _ty_cache，< 100km 强制关全部空调。
+
+    安全设计（用户明确）：
+    - 台风 < 100km 已进入核心圈，外机可能被大风吹倒倒转烧毁
+    - 台风带来的雷电可能对运行中的空调硬件造成雷击损毁
+    - 所以：一旦开启「台风自动关闭空调」(typhoon_ac_off=True) 且距离 < 100km，
+      无论空调当前是开机还是关机（甚至用户刚手动开了），都强制发一次关机指令
+    - 用户若坚持要开空调，必须手动去 CBI 设置页关闭该功能
+      （台风来时沿海城市根本不会热，开风扇足矣）
+
+    - 距离 ≥ 100km 或 typhoon_ac_off=False：直接 return，不动空调
+    - 距离 < 100km 且 typhoon_ac_off=True：遍历所有在线设备，无条件发关
+    """
     min_dist = 99999
     import broadlinkac_core.config as _cfg
 
-    alert_km = _cfg.config.get("typhoon_alert_km", 800)
-    alert_enabled = _cfg.config.get("typhoon_alert_enabled", True)
     ac_off_enabled = _cfg.config.get("typhoon_ac_off", True)
     loc_lat = _cfg.LOCATION["lat"]
     loc_lon = _cfg.LOCATION["lon"]
@@ -237,32 +245,27 @@ def judge_and_shutdown(write_log_func, ty_alert_muted=False, ty_ac_off_sent=Fals
         if not detail:
             continue
         dist = calc_distance(loc_lat, loc_lon, detail["lat"], detail["lon"])
-        status = "⚠️ 预警" if dist < alert_km else "✅ 安全"
-        write_log_func("台风", f"{detail['cn']} ({detail['eng']}) {detail['cat']} 距{dist}km {status}")
+        write_log_func("台风", f"{detail['cn']} ({detail['eng']}) {detail['cat']} 距{dist}km")
         if dist < min_dist:
             min_dist = dist
-        if dist < alert_km and alert_enabled and not ty_alert_muted:
-            alerts.append((detail, dist))
 
-    if ac_off_enabled and min_dist < 100 and not ty_ac_off_sent:
-        ty_ac_off_sent = True
-        from broadlinkac_core.ac_control import send_ac
-        devices = _cfg.config.get("devices", {})
-        offline_count = off_count = 0
-        for mac, dev in devices.items():
-            name = dev.get("name", mac[:8])
-            online = not _cfg._online_macs or mac in _cfg._online_macs
-            if not online:
-                offline_count += 1
-                continue
-            try:
-                send_ac("off", "cool", 26, "auto", source="台风", mac=mac)
-                write_log_func("空调", f"[{datetime.now():%H:%M}] 台风靠近（距{min_dist}km）→ [{name}] 已自动关机")
-                off_count += 1
-            except Exception as e:
-                write_log_func("系统", f"台风关机失败 [{name}]: {e}")
-        write_log_func("系统", f"[{datetime.now():%H:%M}] 台风自动关机完成: 关闭 {off_count} 台, 离线 {offline_count} 台")
-    elif min_dist >= 100:
-        ty_ac_off_sent = False
+    if not ac_off_enabled or min_dist >= 100:
+        return  # 远 / 未启用 → 直接返回，不动空调
 
-    return alerts, ty_ac_off_sent
+    # < 100km 且功能开启：强制发关（不查 power 状态，台风安全优先）
+    from broadlinkac_core.ac_control import send_ac
+    devices = _cfg.config.get("devices", {})
+    offline_count = off_count = 0
+    for mac, dev in devices.items():
+        name = dev.get("name", mac[:8])
+        online = not _cfg._online_macs or mac in _cfg._online_macs
+        if not online:
+            offline_count += 1
+            continue
+        try:
+            send_ac("off", "cool", 26, "auto", source="台风", mac=mac)
+            write_log_func("空调", f"[{datetime.now():%H:%M}] 台风自动关机")
+            off_count += 1
+        except Exception as e:
+            write_log_func("系统", f"台风关机失败 [{name}]: {e}")
+    write_log_func("系统", f"[{datetime.now():%H:%M}] 台风自动关机完成: 关闭 {off_count} 台, 离线 {offline_count} 台")

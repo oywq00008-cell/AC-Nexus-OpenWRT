@@ -1,0 +1,603 @@
+<%+header%>
+<style>
+/* LuCI CSS 变量回退 */
+:root { --cbi-background: #f5f5f5; --cbi-background-hover: #e8e8e8; --cbi-text: #333; --cbi-text-secondary: #666; --border: #ddd }
+@media (prefers-color-scheme: dark) { :root { --cbi-background: #2a2a2a; --cbi-background-hover: #3a3a3a; --cbi-text: #e0e0e0; --cbi-text-secondary: #aaa; --border: #444 } }
+.ac-container{max-width:480px;margin:0 auto;padding:12px}
+.ac-card{background:var(--cbi-background,#f5f5f5);border-radius:8px;padding:16px;margin-bottom:12px;border:1px solid var(--border,#ddd)}
+.ac-card-title{font-size:13px;color:var(--cbi-text-secondary,#666);margin-bottom:10px}
+.ac-status-row{display:flex;align-items:center;justify-content:space-between}
+.ac-device-name{font-size:20px;font-weight:700;color:var(--cbi-text,#333)}
+.ac-status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.ac-dot-online{background:#2ecc71;box-shadow:0 0 8px #2ecc71}
+.ac-dot-offline{background:#e74c3c}
+.ac-status-text{font-size:12px;color:var(--cbi-text-secondary,#666)}
+.ac-power-btn{width:72px;height:72px;border-radius:50%;border:1px solid var(--border,#ddd);font-size:28px;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;margin:16px auto;color:var(--cbi-text-secondary,#999);background:#fff}
+.ac-power-btn{line-height:1;padding:0}
+/* ▶ 字符视觉重心偏左下，用 transform 推回视觉中心 */
+.ac-power-btn>*{transform:translate(2px,-1px);display:block}
+.ac-power-btn:active{background:#e94560;color:#fff;border-color:#e94560;transform:scale(.92)}
+.ac-power-toggle{flex:1;padding:8px 4px;border:1px solid #e94560;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;background:var(--cbi-background,#f5f5f5);color:#e94560}
+.ac-power-toggle.on{background:#e94560;color:#fff;font-weight:600}
+.ac-power-toggle:active{transform:scale(.96)}
+.ac-mode-row{display:flex;gap:6px;justify-content:center}
+.ac-mode-btn{flex:1;padding:8px 4px;border:1px solid var(--border,#ddd);border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text-secondary,#666)}
+.ac-mode-btn.active[data-mode="cool"]{background:#3498db;color:#fff;border-color:#3498db;font-weight:600}
+.ac-mode-btn.active[data-mode="heat"]{background:#e67e22;color:#fff;border-color:#e67e22;font-weight:600}
+.ac-mode-btn.active[data-mode="dry"]{background:#fff;color:#333;border-color:#fff;font-weight:600}
+.ac-mode-btn.active[data-mode="fan"]{background:#27ae60;color:#fff;border-color:#27ae60;font-weight:600}
+.ac-mode-icon{font-size:18px;display:block;margin-bottom:2px}
+.ac-temp-display{text-align:center;margin:16px 0}
+.ac-temp-num{font-size:56px;font-weight:300;line-height:1;color:var(--cbi-text,#333)}
+.ac-temp-unit{font-size:16px;color:var(--cbi-text-secondary,#666)}
+.ac-temp-slider{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(to right,#3498db,#e74c3c);outline:none}
+.ac-temp-slider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.ac-temp-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--cbi-text-secondary,#666);margin-top:4px}
+.ac-fan-row{display:flex;gap:6px;justify-content:center;margin-top:12px}
+.ac-fan-btn{flex:1;padding:8px;border:1px solid var(--border,#ddd);border-radius:6px;font-size:12px;cursor:pointer;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text-secondary,#666);transition:all .2s}
+.ac-fan-btn.active{background:#533483;color:#fff;border-color:#533483}
+.ac-info-row{display:flex;justify-content:space-around;text-align:center;margin-top:8px}
+.ac-info-val{font-size:22px;font-weight:600;color:var(--cbi-text,#333)}
+.ac-info-label{font-size:11px;color:var(--cbi-text-secondary,#666)}
+.ac-last-action{font-size:11px;color:var(--cbi-text-secondary,#666);text-align:center;margin-top:8px}
+.ac-alert-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;margin-top:8px;font-size:13px}
+.ac-alert-safe{background:rgba(46,204,113,.1);color:#2ecc71}
+.ac-alert-warn{background:rgba(230,126,34,.1);color:#e67e22}
+.ac-alert-danger{background:rgba(231,76,60,.1);color:#e74c3c}
+.ac-discover-list{max-height:150px;overflow-y:auto;margin-top:8px;transition:opacity .25s ease}
+.ac-discover-list.fade-out{opacity:0;pointer-events:none}
+.ac-discover-item{padding:8px 10px;border:1px solid var(--border,#ddd);border-radius:6px;margin-bottom:6px;cursor:pointer;transition:all .2s;display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.ac-discover-item:hover{background:var(--cbi-background-hover,#e8e8e8)}
+.ac-discover-mac{font-family:monospace;color:var(--cbi-text-secondary,#666);font-size:11px}
+.ac-toolbar-btn{background:var(--cbi-background,#f0f0f0);color:var(--cbi-text,#333);border:1px solid var(--border,#ddd);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;line-height:1}
+.ac-toolbar-btn:hover{background:var(--cbi-background-hover,#e0e0e0)}
+.ac-sched-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border,#eee);font-size:13px;color:var(--cbi-text,#333)}
+/* 弹窗 */
+.ac-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}
+.ac-overlay.show{display:flex}
+.ac-modal{background:var(--cbi-background,#f5f5f5);border-radius:10px;padding:20px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.ac-modal-title{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;color:var(--cbi-text,#333)}
+.ac-modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--cbi-text-secondary,#666)}
+.ac-field{margin-bottom:12px}
+.ac-field-label{font-size:12px;color:var(--cbi-text-secondary,#666);margin-bottom:4px}
+.ac-field input[type=text],.ac-field input[type=number],.ac-field select{width:100%;padding:6px 8px;border:1px solid var(--border,#ddd);border-radius:5px;font-size:13px;background:var(--cbi-background,#fff);color:var(--cbi-text,#333);box-sizing:border-box}
+.ac-field-row{display:flex;gap:8px;align-items:center}
+.ac-field-row input[type=number]{width:60px}
+.ac-switch{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.ac-switch input[type=checkbox]{width:18px;height:18px;accent-color:#e94560}
+.ac-save-btn{width:100%;padding:10px;background:#e94560;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+.ac-save-btn:active{opacity:.85}
+.ac-rule-row{display:flex;gap:4px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.ac-rule-row input{width:52px!important;text-align:center}
+.ac-rule-row select{width:auto!important;flex:1}
+.ac-rule-del{background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px;padding:0 4px}
+.ac-add-btn{background:none;border:1px dashed var(--border,#ccc);border-radius:5px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--cbi-text-secondary,#666);width:100%}
+.ac-search-results{max-height:120px;overflow-y:auto;margin-top:4px;border:1px solid var(--border,#ddd);border-radius:5px}
+.ac-search-item{padding:6px 8px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border,#eee);color:var(--cbi-text,#333)}
+.ac-search-item:hover{background:var(--cbi-background-hover,#e8e8e8)}
+.ac-search-item small{color:var(--cbi-text-secondary,#999)}
+.ac-log-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
+.ac-log-date{padding:10px 4px;border:1px solid var(--border,#ddd);border-radius:5px;font-size:12px;cursor:not-allowed;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text-secondary,#999);text-align:center;transition:all .15s}
+.ac-log-date.has-log{cursor:pointer;background:#fff;color:#e94560;border-color:#e94560;font-weight:600}
+.ac-log-date.has-log:hover{background:#e94560;color:#fff}
+.ac-log-date.selected{background:#e94560;color:#fff;border-color:#e94560}
+</style>
+
+<div class="ac-container">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+  <select id="devSelect" onchange="switchDevice(this.value)" style="font-size:11px;padding:2px 6px;border:1px solid var(--border,#ddd);border-radius:4px;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text,#333);display:none"></select>
+  <span style="display:flex;gap:4px;align-items:center">
+    <span style="font-size:11px;color:var(--cbi-text-secondary)" id="refreshInfo"></span>
+    <button class="ac-toolbar-btn" onclick="openModal('schedule')" title="定时 & 调温">&#x23F0;</button>
+    <button class="ac-toolbar-btn" onclick="openModal('device')" title="设备设置">&#x2699;</button>
+    <button class="ac-toolbar-btn" onclick="openModal('log')" title="下载日志">&#x1F4CB;</button>
+    <button class="ac-toolbar-btn" onclick="loadAll(true)" title="刷新全部数据">&#x21BB;</button>
+  </span>
+</div>
+
+<div class="ac-card">
+  <div class="ac-card-title">设备状态</div>
+  <div class="ac-status-row">
+    <div>
+      <div class="ac-device-name" id="devName">--</div>
+      <div class="ac-status-text" id="devStatus">检测中...</div>
+    </div>
+    <div><span class="ac-status-dot ac-dot-offline" id="statusDot"></span></div>
+  </div>
+  <button class="ac-power-btn" id="sendBtn" onclick="doSend()"><span>&#x25B6;</span></button>
+
+  <div class="ac-mode-row">
+    <button class="ac-power-toggle" id="powerToggleBtn" onclick="togglePower()">电源关</button>
+    <button class="ac-mode-btn" data-mode="cool" onclick="setMode('cool')"><span class="ac-mode-icon">&#x2744;</span>制冷</button>
+    <button class="ac-mode-btn" data-mode="heat" onclick="setMode('heat')"><span class="ac-mode-icon">&#x1F525;</span>制热</button>
+    <button class="ac-mode-btn" data-mode="dry" onclick="setMode('dry')"><span class="ac-mode-icon">&#x1F4A7;</span>除湿</button>
+    <button class="ac-mode-btn" data-mode="fan" onclick="setMode('fan')"><span class="ac-mode-icon">&#x1F33F;</span>送风</button>
+  </div>
+
+  <div class="ac-temp-display">
+    <span class="ac-temp-num" id="tempNum">26</span><span class="ac-temp-unit">&deg;C</span>
+  </div>
+  <input type="range" min="16" max="30" value="26" class="ac-temp-slider" id="tempSlider"
+         oninput="setTemp(this.value)">
+  <div class="ac-temp-labels"><span>16&deg;</span><span>20&deg;</span><span>24&deg;</span><span>28&deg;</span><span>30&deg;</span></div>
+
+  <div class="ac-fan-row">
+    <button class="ac-fan-btn" data-fan="auto" onclick="setFan('auto')">自动</button>
+    <button class="ac-fan-btn" data-fan="low" onclick="setFan('low')">低</button>
+    <button class="ac-fan-btn" data-fan="medium" onclick="setFan('medium')">中</button>
+    <button class="ac-fan-btn" data-fan="high" onclick="setFan('high')">高</button>
+  </div>
+
+  <div class="ac-last-action" id="lastAction"></div>
+  <div style="text-align:center;margin-top:10px">
+    <button class="ac-toolbar-btn" onclick="discoverDevices()" style="padding:6px 16px">&#x1F50D; 扫描局域网设备</button>
+  </div>
+  <div class="ac-discover-list" id="discoverList" style="display:none"></div>
+</div>
+
+<div class="ac-card">
+  <div class="ac-card-title">环境信息</div>
+  <div class="ac-info-row">
+    <div><div class="ac-info-val" id="outdoorTemp">--</div><div class="ac-info-label">室外温度</div></div>
+    <div><div class="ac-info-val" id="outdoorHumid">--</div><div class="ac-info-label">湿度</div></div>
+    <div><div class="ac-info-val" id="stormDist">--</div><div class="ac-info-label">风暴距离</div></div>
+  </div>
+  <div id="alertBox"></div>
+</div>
+
+<div class="ac-card" style="cursor:pointer" onclick="openModal('schedule')">
+  <div class="ac-card-title">定时设置 <span style="font-size:11px;color:var(--cbi-text-secondary);float:right">&#x23F0; 点击修改</span></div>
+  <div class="ac-sched-row"><span>定时开机</span><span id="schedOn">--</span></div>
+  <div class="ac-sched-row"><span>定时关机</span><span id="schedOff">--</span></div>
+  <div class="ac-sched-row" style="border:none"><span>自动调温</span><span id="autoAdjStatus">关闭</span></div>
+</div>
+</div>
+
+<!-- ⏰ 定时弹窗 -->
+<div class="ac-overlay" id="modal-schedule">
+  <div class="ac-modal">
+    <div class="ac-modal-title">&#x23F0; 定时 & 调温 (<span id="schedDevName">--</span>) <button class="ac-modal-close" onclick="closeModal('schedule')">&times;</button></div>
+    <div class="ac-switch"><span>定时开机</span><input type="checkbox" id="schedEnabled" onchange="toggleSchedOn()"></div>
+    <div class="ac-field"><input type="text" id="schedOnTime" placeholder="HH:MM" style="width:80px" disabled></div>
+    <div class="ac-switch"><span>定时关机</span><input type="checkbox" id="schedOffEnabled" onchange="toggleSchedOff()"></div>
+    <div class="ac-field"><input type="text" id="schedOffTime" placeholder="HH:MM" style="width:80px" disabled></div>
+    <div class="ac-switch"><span>自动调温</span><input type="checkbox" id="autoAdjust" onchange="toggleAutoAdj()"></div>
+    <div id="rulesSection" style="display:none">
+      <div class="ac-field-label">温度规则（室外温度 → 目标温度 + 模式）</div>
+      <div id="rulesList"></div>
+      <button class="ac-add-btn" onclick="addRule()">+ 添加规则</button>
+    </div>
+    <button class="ac-save-btn" onclick="saveSchedule()">&#x1F4BE; 保存设置</button>
+  </div>
+</div>
+
+<!-- ⚙️ 设备设置弹窗 -->
+<div class="ac-overlay" id="modal-device">
+  <div class="ac-modal">
+    <div class="ac-modal-title">&#x2699; 设备设置 (<span id="devSetName">--</span>) <button class="ac-modal-close" onclick="closeModal('device')">&times;</button></div>
+    <div class="ac-field">
+      <div class="ac-field-label">&#x1F4CD; 位置（用于天气和台风数据）</div>
+      <div class="ac-field-row"><input type="text" id="locSearch" placeholder="搜索城市名称..." style="flex:1"><button class="ac-toolbar-btn" onclick="searchLocation()" style="padding:5px 10px">&#x1F50D;</button></div>
+      <div class="ac-search-results" id="searchResults" style="display:none"></div>
+      <div style="font-size:11px;color:var(--cbi-text-secondary);margin-top:4px">当前：<span id="locCurrent">--</span></div>
+    </div>
+    <div class="ac-field">
+      <div class="ac-field-label">&#x2744; 空调品牌</div>
+      <select id="devBrand"></select>
+    </div>
+    <div class="ac-field" style="font-size:11px;color:var(--cbi-text-secondary)">
+      名称：<span id="devNameInfo">--</span> &nbsp; MAC: <span id="devMacInfo">--</span> &nbsp; IP: <span id="devIpInfo">--</span>
+    </div>
+    <button class="ac-save-btn" onclick="saveDevice()">&#x1F4BE; 保存设置</button>
+  </div>
+</div>
+
+<!-- 📋 日志下载弹窗 -->
+<div class="ac-overlay" id="modal-log">
+  <div class="ac-modal">
+    <div class="ac-modal-title">&#x1F4CB; 下载操作日志 <button class="ac-modal-close" onclick="closeModal('log')">&times;</button></div>
+    <div class="ac-field-label">选择日期（有日志的标红可点）</div>
+    <div id="logDateGrid" class="ac-log-grid"></div>
+    <div style="font-size:11px;color:var(--cbi-text-secondary);margin-top:8px">已选：<span id="logSelected">--</span></div>
+    <button class="ac-save-btn" id="logDownloadBtn" onclick="downloadLog()" disabled>&#x2B07; 下载日志</button>
+  </div>
+</div>
+
+<script>
+var API = '/cgi-bin/luci/admin/services/broadlinkac/api';
+var current = {power:'off', mode:'cool', temp:26, fan:'auto', devMac:''};
+var statusData = {};
+var BRANDS = ["gree","midea","haier","hisense","hitachi","daikin","mitsubishi_heavy","mitsubishi","toshiba","panasonic","sharp","fujitsu","aux_ac","changhong","chigo","tcl","xiaomi","samsung","lg","whirlpool"];
+var BRAND_NAMES = {"gree":"格力","midea":"美的","haier":"海尔","hisense":"海信","hitachi":"日立","daikin":"大金","mitsubishi_heavy":"三菱重工","mitsubishi":"三菱电机","toshiba":"东芝","panasonic":"松下","sharp":"夏普","fujitsu":"富士通","aux_ac":"奥克斯","changhong":"长虹","chigo":"志高","tcl":"TCL","xiaomi":"小米","samsung":"三星","lg":"LG","whirlpool":"惠而浦"};
+
+function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
+
+function api(cmd) {
+  document.getElementById('refreshInfo').textContent = '请稍候...';
+  return fetch(API + '?cmd=' + encodeURIComponent(cmd), {credentials:'include'})
+    .then(function(r){ return r.text(); })
+    .then(function(t){
+      document.getElementById('refreshInfo').textContent = '';
+      try { return JSON.parse(t); }
+      catch(e) { return {error: t.substring(0,100)}; }
+    })
+    .catch(function(e){
+      document.getElementById('refreshInfo').textContent = '';
+      return {error: String(e)};
+    });
+}
+
+function loadAll(force) {
+  var cmd = force ? 'refresh' : 'status';
+  api(cmd).then(function(d){
+    statusData = d; updateStatus(d);
+    // 首次打开且没有任何设备 → 自动扫描一次
+    if (!force && d && !d.disabled && (!d.devices || d.devices.length === 0)) {
+      document.getElementById('refreshInfo').textContent = '首次自动扫描...';
+      api('discover').then(function(dd){
+        document.getElementById('refreshInfo').textContent = '';
+        if (dd && dd.ok && dd.devices && dd.devices.length) {
+          // 扫描成功 → 重新拉一次 status 应用新设备
+          api('status').then(function(s){ statusData = s; updateStatus(s); });
+        } else {
+          // 扫描失败/无设备 → 顶部短暂提示
+          document.getElementById('refreshInfo').textContent = '⚠️ 自动扫描未发现设备，请点击扫描';
+          setTimeout(function(){
+            var el = document.getElementById('refreshInfo');
+            if (el.textContent.indexOf('自动扫描') === 0) el.textContent = '';
+          }, 6000);
+        }
+      });
+    }
+  });
+}
+
+function updateStatus(d) {
+  if (d && d.disabled) {
+    document.getElementById('devName').textContent = '插件已停用';
+    document.getElementById('devStatus').textContent = '请在 LuCI 设置页启用服务';
+    document.getElementById('devName').style.color = '#e67e22';
+    return;
+  }
+  if (!d || d.error) { document.getElementById('devStatus').textContent = '获取失败: ' + (d?d.error:'-'); return; }
+  current = Object.assign(current, d.state || {});
+  var on = current.power === 'on';
+  document.getElementById('devName').textContent = d.device_name || '未配置';
+  document.getElementById('devStatus').textContent = d.online ? '在线' : '离线';
+  document.getElementById('statusDot').className = 'ac-status-dot ' + (d.online ? 'ac-dot-online' : 'ac-dot-offline');
+  document.getElementById('powerToggleBtn').textContent = on ? '电源开' : '电源关';
+  document.getElementById('powerToggleBtn').className = 'ac-power-toggle ' + (on ? 'on' : '');
+  document.getElementById('tempNum').textContent = current.temp;
+  document.getElementById('tempSlider').value = current.temp;
+
+  // 设备选择器
+  var sel = document.getElementById('devSelect');
+  var devs = d.devices || [];
+  if (devs.length >= 1) {
+    sel.style.display = 'inline-block';
+    sel.innerHTML = '';
+    for (var i=0; i<devs.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = devs[i].mac;
+      opt.textContent = devs[i].name;
+      sel.appendChild(opt);
+    }
+    if (current.devMac) sel.value = current.devMac;
+  } else { sel.style.display = 'none'; }
+
+  var ms = document.querySelectorAll('.ac-mode-btn');
+  for (var i=0; i<ms.length; i++) ms[i].classList.remove('active');
+  var mb = document.querySelector('.ac-mode-btn[data-mode="' + current.mode + '"]');
+  if (mb) mb.classList.add('active');
+
+  var fs = document.querySelectorAll('.ac-fan-btn');
+  for (var i=0; i<fs.length; i++) fs[i].classList.remove('active');
+  var fb = document.querySelector('.ac-fan-btn[data-fan="' + current.fan + '"]');
+  if (fb) fb.classList.add('active');
+
+  var wt = (d.weather && d.weather.temp) ? d.weather.temp : '--';
+  document.getElementById('outdoorTemp').textContent = wt + '\u00b0';
+  document.getElementById('outdoorHumid').textContent = ((d.weather && d.weather.humidity) ? d.weather.humidity : '--') + '%';
+
+  var sd = d.storm_dist || 99999;
+  document.getElementById('stormDist').textContent = sd < 99999 ? sd + 'km' : '--';
+  var ab = document.getElementById('alertBox');
+  if (sd < 100) ab.innerHTML = '<div class="ac-alert-row ac-alert-danger">&#x1F32A; ' + d.storm_name + ' ' + sd + 'km</div>';
+  else if (sd < 800) ab.innerHTML = '<div class="ac-alert-row ac-alert-warn">&#x26A0; ' + d.storm_name + ' ' + sd + 'km</div>';
+  else if (sd < 99999) ab.innerHTML = '<div class="ac-alert-row ac-alert-safe">&#x2705; ' + d.storm_name + ' ' + sd + 'km</div>';
+  else ab.innerHTML = '';
+
+  document.getElementById('schedOn').textContent = (d.schedule && d.schedule.on) || '--';
+  document.getElementById('schedOff').textContent = (d.schedule && d.schedule.off) || '--';
+  document.getElementById('autoAdjStatus').textContent = (d.schedule && d.schedule.auto_adjust) ? '开启' : '关闭';
+  document.getElementById('lastAction').textContent = (d.state && d.state.last_action) || '';
+}
+
+// ── 空调控制 ──
+// 下面所有按钮只更新状态，不发码
+function togglePower() {
+  current.power = current.power === 'on' ? 'off' : 'on';
+  var on = current.power === 'on';
+  document.getElementById('powerToggleBtn').textContent = on ? '电源开' : '电源关';
+  document.getElementById('powerToggleBtn').className = 'ac-power-toggle ' + (on ? 'on' : '');
+}
+function setMode(m) {
+  current.mode = m;
+  var ms = document.querySelectorAll('.ac-mode-btn');
+  for (var i=0; i<ms.length; i++) ms[i].classList.toggle('active', ms[i].getAttribute('data-mode') === m);
+}
+function setTemp(t) { current.temp = parseInt(t); document.getElementById('tempNum').textContent = current.temp; }
+function setFan(f) {
+  current.fan = f;
+  var fs = document.querySelectorAll('.ac-fan-btn');
+  for (var i=0; i<fs.length; i++) fs[i].classList.toggle('active', fs[i].getAttribute('data-fan') === f);
+}
+// 大圆按钮：发送 power + mode + temp + fan
+function doSend() {
+  var pm = {on:'开机', off:'关机'};
+  var mm = {cool:'制冷', heat:'制热', dry:'除湿', fan:'送风'};
+  var fm = {auto:'自动', low:'低', medium:'中', high:'高'};
+  var s = '✅ 已发送: ' + (pm[current.power]||current.power) + ' ' +
+          (mm[current.mode]||current.mode) + ' ' + current.temp + '°C ' +
+          (fm[current.fan]||current.fan);
+  api('send ' + current.power + ' ' + current.mode + ' ' + current.temp + ' ' + current.fan).then(function(d){
+    if (d.ok) { showError(s); }
+    else showError('❌ ' + (d.error || '失败'));
+  });
+}
+function showError(msg) {
+  var el = document.getElementById('lastAction');
+  el.textContent = msg; el.style.color = '';
+  if (showError._t) clearTimeout(showError._t);
+  showError._t = setTimeout(function(){
+    el.textContent = '';
+  }, 3000);
+}
+
+// ── 设备发现 ──
+function discoverDevices() {
+  document.getElementById('refreshInfo').textContent = '请稍候...';
+  var list = document.getElementById('discoverList');
+  list.style.display = 'block';
+  list.classList.remove('fade-out');
+  list.innerHTML = '<div style="text-align:center;padding:8px">扫描中...</div>';
+  api('discover').then(function(d){
+    document.getElementById('refreshInfo').textContent = '';
+    if (!d.ok) { list.innerHTML = '<div style="text-align:center;color:#e74c3c;padding:8px">' + d.error + '</div>'; return; }
+    if (!d.devices || !d.devices.length) { list.innerHTML = '<div style="text-align:center;padding:8px">未发现博联设备</div>'; return; }
+    var h = '';
+    for (var i=0; i<d.devices.length; i++) {
+      var dev = d.devices[i];
+      h += '<div class="ac-discover-item"><div><strong>' + dev.model + '</strong><br><span class="ac-discover-mac">' + dev.mac + '</span></div><span style="color:var(--cbi-text-secondary)">' + dev.host + '</span></div>';
+    }
+    h += '<div style="font-size:11px;padding:4px;color:#2ecc71">&#x2705; 已自动保存 ' + d.devices.length + ' 台</div>';
+    list.innerHTML = h;
+    loadAll();
+    // 3 秒后整块淡出隐藏
+    setTimeout(function(){
+      list.classList.add('fade-out');
+      setTimeout(function(){ list.style.display = 'none'; }, 260);
+    }, 3000);
+  });
+}
+function switchDevice(mac) {
+  if (!mac) return;
+  api('switch ' + mac).then(function(d){
+    if (d.ok) { current.devMac = mac; loadAll(); }
+  });
+}
+
+// ── 弹窗管理 ──
+function openModal(type) {
+  document.getElementById('modal-' + type).classList.add('show');
+  if (type === 'schedule') fillScheduleForm();
+  if (type === 'device') fillDeviceForm();
+  if (type === 'log') fillLogForm();
+}
+function closeModal(type) {
+  document.getElementById('modal-' + type).classList.remove('show');
+}
+
+// ── 日志下载弹窗 ──
+var _logSelected = null;
+function fillLogForm() {
+  _logSelected = null;
+  document.getElementById('logDownloadBtn').disabled = true;
+  document.getElementById('logSelected').textContent = '--';
+  var grid = document.getElementById('logDateGrid');
+  grid.innerHTML = '<div style="grid-column:span 4;text-align:center;padding:8px;color:var(--cbi-text-secondary);font-size:12px">加载中...</div>';
+  api('log_dates').then(function(d){
+    if (!d || !d.ok) {
+      grid.innerHTML = '<div style="grid-column:span 4;text-align:center;padding:8px;color:#e74c3c;font-size:12px">获取失败: ' + (d?d.error:'-') + '</div>';
+      return;
+    }
+    // 生成最近 14 天的日期网格，有日志的标红可点
+    var dates = d.dates || [];
+    var dateSet = {}; for (var i=0;i<dates.length;i++) dateSet[dates[i]] = true;
+    var h = '';
+    var now = new Date();
+    for (var i=13; i>=0; i--) {
+      var dt = new Date(now.getTime() - i*86400000);
+      var ds = dt.getFullYear() + '-' + ('0'+(dt.getMonth()+1)).slice(-2) + '-' + ('0'+dt.getDate()).slice(-2);
+      var has = dateSet[ds];
+      var cls = 'ac-log-date' + (has ? ' has-log' : '');
+      var label = (dt.getMonth()+1) + '/' + dt.getDate();
+      var sub = ['日','一','二','三','四','五','六'][dt.getDay()];
+      h += '<div class="' + cls + '" data-date="' + ds + '" onclick="selectLogDate(this)">' + label + '<div style="font-size:10px;opacity:.7">周' + sub + '</div></div>';
+    }
+    grid.innerHTML = h;
+  });
+}
+function selectLogDate(el) {
+  if (!el.classList.contains('has-log')) return;
+  var cells = document.querySelectorAll('.ac-log-date');
+  for (var i=0;i<cells.length;i++) cells[i].classList.remove('selected');
+  el.classList.add('selected');
+  _logSelected = el.getAttribute('data-date');
+  document.getElementById('logSelected').textContent = _logSelected;
+  document.getElementById('logDownloadBtn').disabled = false;
+}
+function downloadLog() {
+  if (!_logSelected) return;
+  // 走独立 endpoint（绕开 luci.sys.exec 的 4KB 截断）
+  var url = '/cgi-bin/luci/admin/services/broadlinkac/log_download?date=' + encodeURIComponent(_logSelected);
+  window.open(url, '_blank');
+}
+
+// ── 定时弹窗 ──
+function fillScheduleForm() {
+  var d = statusData;
+  var dev = (d && d.devices && d.devices.length > 0) ? d.devices[0].name : '--';
+  document.getElementById('schedDevName').textContent = dev;
+  var sc = d.schedule || {};
+  document.getElementById('schedEnabled').checked = !!sc.enabled;
+  document.getElementById('schedOnTime').value = sc.on_time || '10:00';
+  document.getElementById('schedOnTime').disabled = !sc.enabled;
+  document.getElementById('schedOffEnabled').checked = !!sc.off_enabled;
+  document.getElementById('schedOffTime').value = sc.off_time || '22:00';
+  document.getElementById('schedOffTime').disabled = !sc.off_enabled;
+  document.getElementById('autoAdjust').checked = sc.auto_adjust !== false;
+  buildRules(sc.rules || []);
+  toggleAutoAdj();
+}
+function toggleSchedOn() {
+  var en = document.getElementById('schedEnabled').checked;
+  document.getElementById('schedOnTime').disabled = !en;
+}
+function toggleSchedOff() {
+  var en = document.getElementById('schedOffEnabled').checked;
+  document.getElementById('schedOffTime').disabled = !en;
+}
+function toggleAutoAdj() {
+  var en = document.getElementById('autoAdjust').checked;
+  document.getElementById('rulesSection').style.display = en ? 'block' : 'none';
+}
+function buildRules(rules) {
+  var h = '';
+  for (var i=0; i<rules.length; i++) {
+    var r = rules[i];
+    h += '<div class="ac-rule-row">';
+    h += '<input type="number" value="' + r[0] + '" data-idx="' + i + '" data-field="0"> ~ ';
+    h += '<input type="number" value="' + r[1] + '" data-idx="' + i + '" data-field="1"> &deg;C &rarr; ';
+    h += '<input type="number" value="' + r[2] + '" data-idx="' + i + '" data-field="2"> &deg;C ';
+    h += '<select data-idx="' + i + '" data-field="3">';
+    ['cool','heat','dry','fan','off'].forEach(function(m){
+      h += '<option value="' + m + '"' + (r[3]===m?' selected':'') + '>' + {'cool':'制冷','heat':'制热','dry':'除湿','fan':'送风','off':'关机'}[m] + '</option>';
+    });
+    h += '</select>';
+    h += '<button class="ac-rule-del" onclick="delRule(' + i + ')">&times;</button></div>';
+  }
+  if (!rules.length) h = '<div style="font-size:12px;color:var(--cbi-text-secondary);padding:4px">暂无规则，点击下方添加</div>';
+  document.getElementById('rulesList').innerHTML = h;
+}
+function addRule() {
+  var rules = statusData.schedule ? (statusData.schedule.rules || []) : [];
+  rules.push([19, 35, 26, 'cool']);
+  buildRules(rules);
+}
+function delRule(idx) {
+  var rules = statusData.schedule ? (statusData.schedule.rules || []) : [];
+  rules.splice(idx, 1);
+  buildRules(rules);
+}
+function collectRules() {
+  var rules = [];
+  var rows = document.querySelectorAll('.ac-rule-row');
+  for (var i=0; i<rows.length; i++) {
+    var inputs = rows[i].querySelectorAll('input');
+    var sel = rows[i].querySelector('select');
+    if (inputs.length >= 3 && sel) {
+      rules.push([parseInt(inputs[0].value)||0, parseInt(inputs[1].value)||99, parseInt(inputs[2].value)||26, sel.value]);
+    }
+  }
+  return rules;
+}
+function saveSchedule() {
+  var data = {
+    mac: current.devMac || '',
+    enabled: document.getElementById('schedEnabled').checked,
+    on_time: document.getElementById('schedOnTime').value,
+    off_enabled: document.getElementById('schedOffEnabled').checked,
+    off_time: document.getElementById('schedOffTime').value,
+    auto_adjust: document.getElementById('autoAdjust').checked,
+    rules: collectRules()
+  };
+  api('save_schedule ' + b64(JSON.stringify(data))).then(function(d){
+    if (d.ok) { closeModal('schedule'); loadAll(); }
+    else showError(d.error || '保存失败');
+  });
+}
+
+// ── 设备设置弹窗 ──
+function fillDeviceForm() {
+  var d = statusData;
+  var dev = (d && d.devices && d.devices.length > 0) ? d.devices[0].name : '--';
+  document.getElementById('devSetName').textContent = dev;
+  var loc = d.location || {};
+  document.getElementById('locCurrent').textContent = loc.name ? loc.name + '  ' + loc.lat.toFixed(4) + '°N, ' + loc.lon.toFixed(4) + '°E' : '未设置';
+  var info = d.device_info || {};
+  document.getElementById('devNameInfo').textContent = d.device_name || '--';
+  document.getElementById('devMacInfo').textContent = info.mac || '--';
+  document.getElementById('devIpInfo').textContent = info.host || '--';
+  var sel = document.getElementById('devBrand');
+  sel.innerHTML = '';
+  for (var i=0; i<BRANDS.length; i++) {
+    var b = BRANDS[i];
+    var opt = document.createElement('option');
+    opt.value = b;
+    opt.textContent = (BRAND_NAMES[b] || b);
+    if (b === (info.brand || 'gree')) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  document.getElementById('searchResults').style.display = 'none';
+}
+function searchLocation() {
+  var q = document.getElementById('locSearch').value.trim();
+  if (!q) return;
+  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=6&accept-language=zh&countrycodes=cn';
+  var res = document.getElementById('searchResults');
+  res.style.display = 'block';
+  res.innerHTML = '<div style="padding:6px;font-size:12px;color:var(--cbi-text-secondary)">搜索中...</div>';
+  fetch(url).then(function(r){ return r.json(); }).then(function(data){
+    if (!data || !data.length) { res.innerHTML = '<div style="padding:6px;font-size:12px;color:#e74c3c">未找到</div>'; return; }
+    var h = '';
+    for (var i=0; i<data.length; i++) {
+      var it = data[i];
+      // 用 data-attr + dataset 取值，避免单引号/双引号注入 onclick 字符串
+      var safeName = (it.name || q);
+      h += '<div class="ac-search-item" data-lat="' + it.lat + '" data-lon="' + it.lon + '" data-name="' + encodeURIComponent(safeName) + '" onclick="selectLocationFromEl(this)">' + it.display_name + '</div>';
+    }
+    res.innerHTML = h;
+  }).catch(function(){ res.innerHTML = '<div style="padding:6px;font-size:12px;color:#e74c3c">搜索失败</div>'; });
+}
+function selectLocationFromEl(el) {
+  var lat = parseFloat(el.getAttribute('data-lat'));
+  var lon = parseFloat(el.getAttribute('data-lon'));
+  var name = decodeURIComponent(el.getAttribute('data-name') || '');
+  selectLocation(lat, lon, name);
+}
+function selectLocation(lat, lon, name) {
+  document.getElementById('locSearch').value = '';
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('locCurrent').textContent = name + '  ' + lat.toFixed(4) + '°N, ' + lon.toFixed(4) + '°E';
+  // Save immediately
+  api('location_save ' + b64(JSON.stringify({lat: lat, lon: lon, name: name}))).then(function(d){
+    if (d.ok) loadAll();
+    else showError(d.error || '保存失败');
+  });
+}
+function saveDevice() {
+  var info = statusData.device_info || {};
+  var data = {
+    mac: info.mac || current.devMac || '',
+    brand: document.getElementById('devBrand').value
+  };
+  api('save_device ' + b64(JSON.stringify(data))).then(function(d){
+    if (d.ok) { closeModal('device'); loadAll(); }
+    else showError(d.error || '保存失败');
+  });
+}
+
+loadAll();
+</script>
+<%+footer%>

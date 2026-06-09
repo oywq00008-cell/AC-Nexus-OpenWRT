@@ -1,5 +1,5 @@
 Package: broadlinkac
-Version: 3.0-1
+Version: 3.1-1
 Depends: python3-light, python3-urllib, python3-json, python3-math, python3-threading, python3-datetime, python3-re, python3-socket, python3-ssl, python3-gzip, python3-broadlink, python3-schedule, python3-pip
 Section: utils
 Architecture: aarch64_cortex-a55
@@ -7,5 +7,7 @@ Maintainer: oywq00008-cell
 License: MIT
 Description: AI-powered smart AC controller for Broadlink RM series.
  Supports 17 AC brands, dual weather sources (Baidu/QWeather),
- NMC typhoon & NHC hurricane tracking, auto AC shutdown on storm <100km.
+ NMC typhoon tracking, auto AC shutdown on storm <100km.
+ v3.1: weather fallback chain, typhoon cache, log download, init guard,
+  2h auto-adjust with storm intercept, LuCI dashboard polish.
  Installs: pip3 install hvac_ir after opkg install (see postinst).

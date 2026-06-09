@@ -1,6 +1,24 @@
-import tarfile, os, io
+import tarfile, os, io, shutil
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+# Step 0: 同步 data/ <- ../broadlinkac/files/（避免 stale data 打包旧代码）
+src = '../broadlinkac/files'
+dst = 'data'
+if os.path.exists(dst):
+    shutil.rmtree(dst)
+shutil.copytree(src, dst)
+
+# 清理 __pycache__ 和 .pyc（不打包进 IPK）
+for root, dirs, files in os.walk(dst):
+    for d in list(dirs):
+        if d == '__pycache__':
+            shutil.rmtree(os.path.join(root, d), ignore_errors=True)
+            dirs.remove(d)
+    for f in files:
+        if f.endswith('.pyc'):
+            os.remove(os.path.join(root, f))
+print(f'Synced: {src} -> {dst}')
 
 # Clean
 for f in ['control.tar.gz', 'data.tar.gz', 'debian-binary']:
@@ -73,7 +91,7 @@ for name, st in entries:
     with open(name, 'rb') as f:
         result += ar_pad(f.read())
 
-out = '../broadlinkac_3.0-1_aarch64_cortex-a55.ipk'
+out = '../broadlinkac_3.1-1_aarch64_cortex-a55.ipk'
 with open(out, 'wb') as f:
     f.write(result)
 print(f'Done: {out} ({len(result)} bytes)')

@@ -114,7 +114,9 @@ def send_ac(power: str, mode: str, temp: int, fan: str, source="手动", mac=Non
                     "dry": sender.MODE_DRY, "fan": sender.MODE_FAN,
                     "heat": sender.MODE_HEAT}
         fan_map = {"auto": sender.FAN_AUTO, "1": sender.FAN_1,
-                   "2": sender.FAN_2, "3": sender.FAN_3}
+                   "2": sender.FAN_2, "3": sender.FAN_3,
+                   # 前端 UI 用 low/medium/high，兼容映射
+                   "low": sender.FAN_1, "medium": sender.FAN_2, "high": sender.FAN_3}
         pwr = sender.POWER_ON if power == "on" else sender.POWER_OFF
         m = mode_map.get(mode, sender.MODE_COOL)
         f = fan_map.get(fan, sender.FAN_AUTO)
@@ -132,9 +134,12 @@ def send_ac(power: str, mode: str, temp: int, fan: str, source="手动", mac=Non
             "panasonic": {"auto": 0, "cool": 3, "dry": 2, "fan": 6, "heat": 4},
         }
         fan_maps = {
-            "haier": {"auto": 0x00, "1": 0x01, "2": 0x02, "3": 0x03},
-            "aux_ac": {"auto": 5, "1": 1, "2": 2, "3": 3},
-            "panasonic": {"auto": 7, "1": 3, "2": 2, "3": 1},
+            "haier": {"auto": 0x00, "1": 0x01, "2": 0x02, "3": 0x03,
+                      "low": 0x01, "medium": 0x02, "high": 0x03},
+            "aux_ac": {"auto": 5, "1": 1, "2": 2, "3": 3,
+                       "low": 1, "medium": 2, "high": 3},
+            "panasonic": {"auto": 7, "1": 3, "2": 2, "3": 1,
+                          "low": 3, "medium": 2, "high": 1},
         }
         mode_map = mode_maps.get(brand, {"auto": 0, "cool": 1, "dry": 2, "fan": 3, "heat": 4})
         fan_map = fan_maps.get(brand, {"auto": 7, "1": 0, "2": 1, "3": 2})

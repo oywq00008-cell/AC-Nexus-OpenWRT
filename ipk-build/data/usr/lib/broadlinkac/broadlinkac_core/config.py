@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 # ── 路径常量 ──
-APP_DIR = Path.home() / ".ac_controller"
+APP_DIR = Path("/root/.ac_controller")
 CONFIG_FILE = APP_DIR / "config.json"
 LOG_DIR = APP_DIR / "logs"
 
@@ -60,8 +60,6 @@ def load_config():
     return {
         "current_device_mac": "",
         "devices": {},
-        "typhoon_alert_km": 800,
-        "typhoon_alert_enabled": True,
         "typhoon_ac_off": True,
         "typhoon_provider": "nmc",
         "api_key": "",
@@ -71,6 +69,7 @@ def load_config():
         "baidu_key": "",
         "weather_provider": "baidu",
         "weather_provider_set": False,
+        "enabled": True,
     }
 
 
@@ -213,12 +212,39 @@ def _migrate_old_config():
 
 
 def init(api_key=None, qw_host=None, location=None, brand=None):
-    """初始化：加载配置、迁移旧版、同步全局变量、启动调度"""
+    """初始化：加载配置、迁移旧版、同步全局变量、启动调度
+
+    异常保护（用户设计意图）：
+    - 任何一个步骤抛异常，service 都不能死（procd 反复重启会刷 syslog）
+    - 出错时降级运行：用 load_config() 的空 defaults 撑住，后续 status 请求能返回"未配置"
+    - 异常写 syslog（procd_set_param stderr 1 已经在管），便于排障
+    """
     global config
-    config = load_config()
-    _migrate_old_config()
-    if config.get("current_device_mac") and config.get("devices"):
-        _load_device_to_flat(config["current_device_mac"])
+    try:
+        config = load_config()
+    except Exception as e:
+        # load_config 内部 mkdir / 读 JSON 失败 — 拿空 defaults 撑住
+        from broadlinkac_core.config import load_config as _lc
+        config = {
+            "current_device_mac": "", "devices": {},
+            "typhoon_ac_off": True, "typhoon_provider": "nmc",
+            "api_key": "", "qw_host": "", "location": dict(LOCATION),
+            "appearance_mode": "system", "baidu_key": "",
+            "weather_provider": "baidu", "weather_provider_set": False,
+            "enabled": True,
+        }
+        print(f"[init] load_config 失败, 降级运行: {e}")
+    try:
+        _migrate_old_config()
+    except Exception as e:
+        # 迁移失败（discover 失败 / JSON 半损坏）不阻塞启动
+        print(f"[init] _migrate_old_config 失败, 跳过: {e}")
+    try:
+        if config.get("current_device_mac") and config.get("devices"):
+            _load_device_to_flat(config["current_device_mac"])
+    except Exception as e:
+        print(f"[init] _load_device_to_flat 失败, 跳过: {e}")
+
     changed = False
     if api_key:
         config["api_key"] = api_key
@@ -236,9 +262,30 @@ def init(api_key=None, qw_host=None, location=None, brand=None):
             changed = True
     if changed:
         save_config(config)
-    apply_config()
-    from broadlinkac_core.scheduler import start_scheduler
-    start_scheduler()
+    try:
+        apply_config()
+    except Exception as e:
+        print(f"[init] apply_config 失败: {e}")
+    try:
+        from broadlinkac_core.scheduler import start_scheduler, start_data_loops
+        start_scheduler()
+        start_data_loops()
+    except Exception as e:
+        print(f"[init] 启动调度失败: {e}")
+
+    # 启动时立即拉一次天气/台风，初始化缓存（容错：失败不影响进程存活）
+    try:
+        from broadlinkac_core.weather import fetch_weather
+        w = fetch_weather()
+        if w and w.get("temp"):
+            _cached_temp = float(w["temp"])
+    except Exception as e:
+        print(f"[init] 启动拉天气失败: {e}")
+    try:
+        from broadlinkac_core.typhoon import fetch_and_cache
+        fetch_and_cache()
+    except Exception as e:
+        print(f"[init] 启动拉台风失败: {e}")
 
 
 # 缓存的室外温度
