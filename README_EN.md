@@ -1,6 +1,6 @@
 # BroadlinkAC-OpenWRT
 
-OpenWRT router plugin for Broadlink AC control — the headless sibling of the desktop app.
+The Broadlink fully automatic air conditioning control plugin for OpenWRT routers automatically acquires weather data, enabling the router to automatically manage and adjust the air conditioning and temperature around the clock.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenWRT](https://img.shields.io/badge/OpenWRT-21%2B-blue.svg)]()
@@ -41,6 +41,7 @@ Navigate to: `http://192.168.1.1/cgi-bin/luci/admin/services/broadlinkac`
 **Services → Broadlink AC Control → Settings**:
 - Baidu Weather API Key (apply [here](https://lbsyun.baidu.com/apiconsole/key)) — recommended
 - QWeather API Key + Host (apply [here](https://dev.qweather.com/)) — fallback
+- free!
 
 ### 4. Scan LAN Devices
 
@@ -107,10 +108,10 @@ broadlinkac/
 
 ## 🔗 Sister Project
 
-**Desktop app**: [BroadlinkAC-For-Agent](https://github.com/oywq00008-cell/BroadlinkAC-For-Agent)
+**Desktop app and Agent**: [BroadlinkAC-For-Agent](https://github.com/oywq00008-cell/BroadlinkAC-For-Agent)
 - Cross-platform desktop GUI (Windows / macOS / Linux)
 - AI Agent Skill interface
-- Real-time manual control
+- More features, better experience, highly recommended!
 
 **Router app (this repo)**:
 - 24/7 headless operation
@@ -127,4 +128,4 @@ MIT — see [LICENSE](LICENSE)
 
 - IR protocols based on [python-broadlink](https://github.com/mjg59/python-broadlink) and [hvac_ir](https://github.com/nicko858/hvac_ir)
 - Weather data from Baidu Maps Open Platform + QWeather
-- Typhoon data from China Meteorological Administration (NMC)
+- Typhoon data from [NMC](http://www.nmc.cn) / [NHC](https://www.nhc.noaa.gov/)
