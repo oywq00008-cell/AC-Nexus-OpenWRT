@@ -1,11 +1,14 @@
-"""BroadlinkAC Core — 台风监测"""
+"""BroadlinkAC Core — 风暴监测"""
 
 import json
 import math
 import re
 import ssl
 import urllib.request
-from datetime import datetime
+import zipfile
+import io
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 
 NMC_HOST = "https://typhoon.nmc.cn/weatherservice"
 
@@ -111,30 +114,32 @@ def calc_distance(lat1, lon1, lat2, lon2):
 
 def typhoon_threat_distance(provider=None):
     """评估最近风暴/飓风距离 (km)。
-    Agent / 定时任务 / status API 共用此函数。
-    强制走 _ty_cache（_typhoon_loop 每 30min 拉一次写进来的），
-    缓存空才现场拉一次兜底，再空就返回 (99999, "")。
-    返回 (距离, 名称)。任何异常均返回 (99999, "")，不抛异常。
+    Agent 可直接调用：<100km 即应关机。返回 (距离, 名称)。
+    provider 不传则走 config 当前设置。
+    任何异常均返回 (99999, "")，不抛异常。
     """
     import broadlinkac_core.config as _cfg
     try:
+        provider = provider or _cfg.config.get("typhoon_provider", "nmc")
         lat = _cfg.LOCATION["lat"]
         lon = _cfg.LOCATION["lon"]
-        cache = get_cached()
-        if not cache:
-            # 兜底：刚启动/网络失败的 30min 空档期
-            fetch_and_cache()
-            cache = get_cached()
-        if not cache:
-            return 99999, ""
         min_dist, name = 99999, ""
-        for t in cache:
-            d = t.get("detail")
-            if not d:
-                continue
-            dist = calc_distance(lat, lon, d["lat"], d["lon"])
-            if dist < min_dist:
-                min_dist, name = dist, d["cn"]
+
+        if provider == "nhc":
+            storms = fetch_nhc_storms()
+            for s in storms:
+                d = s.get("detail", {})
+                if d:
+                    dist = calc_distance(lat, lon, d["lat"], d["lon"])
+                    if dist < min_dist:
+                        min_dist, name = dist, d["cn"]
+        else:
+            for t in fetch_typhoons():
+                d = fetch_typhoon_detail(t["id"])
+                if d:
+                    dist = calc_distance(lat, lon, d["lat"], d["lon"])
+                    if dist < min_dist:
+                        min_dist, name = dist, d["cn"]
         return min_dist, name
     except Exception as e:
         print(f"[威胁评估] {e}")
@@ -145,16 +150,49 @@ def typhoon_threat_distance(provider=None):
 
 NHC_CAT = {"TD": "热带低压", "TS": "热带风暴", "HU": "飓风", "PTC": "后热带气旋"}
 DIRS = ["北", "东北", "东", "东南", "南", "西南", "西", "西北"]
+NHC_KML_NS = "http://www.opengis.net/kml/2.2"
+
+
+def _parse_nhc_forecast_kmz(kmz_url):
+    """下载 NHC KMZ 预报包 → 提取 KML → 返回 forecasts 列表"""
+    try:
+        resp = _urlopen(kmz_url, timeout=15)
+        zf = zipfile.ZipFile(io.BytesIO(resp.read()))
+        # KMZ 里通常只有一个 .kml 文件
+        kml_name = [n for n in zf.namelist() if n.endswith(".kml")]
+        if not kml_name:
+            print(f"[NHC] KMZ 中未找到 KML")
+            return []
+        kml_data = zf.read(kml_name[0]).decode("utf-8")
+        root = ET.fromstring(kml_data)
+
+        # 收集所有 Placemark 的时间+坐标（按时间排序）
+        points = []
+        now = datetime.now(timezone.utc)
+        for pm in root.findall(f".//{{{NHC_KML_NS}}}Placemark"):
+            when_el = pm.find(f".//{{{NHC_KML_NS}}}when")
+            coord_el = pm.find(f".//{{{NHC_KML_NS}}}Point//{{{NHC_KML_NS}}}coordinates")
+            if when_el is None or coord_el is None:
+                continue
+            try:
+                ts = datetime.fromisoformat(when_el.text.replace("Z", "+00:00"))
+                lon, lat, *_ = coord_el.text.strip().split(",")
+                hours = round((ts - now).total_seconds() / 3600)
+                if hours >= 0:
+                    points.append({"lat": float(lat), "lon": float(lon), "hours": hours})
+            except (ValueError, TypeError):
+                continue
+        points.sort(key=lambda p: p["hours"])
+        return points[:8]  # 最多取前 8 个预报点
+    except Exception as e:
+        print(f"[NHC] KMZ 解析失败: {e}")
+        return []
 
 
 def fetch_nhc_storms():
     """拉取 NHC 活跃飓风，归一化为与 NMC 相同的 _typhoons_data 格式"""
     try:
-        req = urllib.request.Request(
-            "https://www.nhc.noaa.gov/CurrentStorms.json",
-            headers={"User-Agent": "BroadlinkAC/3.0"}
-        )
-        resp = urllib.request.urlopen(req, timeout=10)
+        resp = _urlopen("https://www.nhc.noaa.gov/CurrentStorms.json", timeout=10)
         data = json.loads(resp.read().decode("utf-8"))
     except Exception as e:
         print(f"[NHC] 请求失败: {e}")
@@ -170,6 +208,12 @@ def fetch_nhc_storms():
             move_dir = DIRS[round(int(s["movementDir"]) / 45) % 8]
             update = s["lastUpdate"].replace("T", " ").replace("Z", "").split(".")[0]
 
+            # 尝试解析 KMZ 预报路径
+            forecasts = []
+            ft = s.get("forecastTrack")
+            if ft and ft.get("kmzFile"):
+                forecasts = _parse_nhc_forecast_kmz(ft["kmzFile"])
+
             results.append({
                 "id": s["id"], "eng": s["name"], "cn": s["name"],
                 "code": s["binNumber"], "meaning": "",
@@ -181,7 +225,7 @@ def fetch_nhc_storms():
                     "direction": f"{move_dir} ({s['movementDir']}°)",
                     "speed": move_spd,
                     "update_time": update,
-                    "forecasts": [],  # NHC 预报在 KMZ 文件里，不解析
+                    "forecasts": forecasts,
                 }
             })
         except Exception as e:
@@ -219,23 +263,13 @@ def get_cached():
     return _ty_cache
 
 
-def judge_and_shutdown(write_log_func, _ty_ac_off_sent_unused=False):
-    """遍历 _ty_cache，< 100km 强制关全部空调。
-
-    安全设计（用户明确）：
-    - 台风 < 100km 已进入核心圈，外机可能被大风吹倒倒转烧毁
-    - 台风带来的雷电可能对运行中的空调硬件造成雷击损毁
-    - 所以：一旦开启「台风自动关闭空调」(typhoon_ac_off=True) 且距离 < 100km，
-      无论空调当前是开机还是关机（甚至用户刚手动开了），都强制发一次关机指令
-    - 用户若坚持要开空调，必须手动去 CBI 设置页关闭该功能
-      （台风来时沿海城市根本不会热，开风扇足矣）
-
-    - 距离 ≥ 100km 或 typhoon_ac_off=False：直接 return，不动空调
-    - 距离 < 100km 且 typhoon_ac_off=True：遍历所有在线设备，无条件发关
-    """
+def judge_and_shutdown(write_log_func, ty_alert_muted=False, ty_ac_off_sent=False):
+    alerts = []
     min_dist = 99999
     import broadlinkac_core.config as _cfg
 
+    alert_km = _cfg.config.get("typhoon_alert_km", 800)
+    alert_enabled = _cfg.config.get("typhoon_alert_enabled", True)
     ac_off_enabled = _cfg.config.get("typhoon_ac_off", True)
     loc_lat = _cfg.LOCATION["lat"]
     loc_lon = _cfg.LOCATION["lon"]
@@ -245,27 +279,32 @@ def judge_and_shutdown(write_log_func, _ty_ac_off_sent_unused=False):
         if not detail:
             continue
         dist = calc_distance(loc_lat, loc_lon, detail["lat"], detail["lon"])
-        write_log_func("台风", f"{detail['cn']} ({detail['eng']}) {detail['cat']} 距{dist}km")
+        status = "⚠️ 预警" if dist < alert_km else "✅ 安全"
+        write_log_func("台风", f"{detail['cn']} ({detail['eng']}) {detail['cat']} 距{dist}km {status}")
         if dist < min_dist:
             min_dist = dist
+        if dist < alert_km and alert_enabled and not ty_alert_muted:
+            alerts.append((detail, dist))
 
-    if not ac_off_enabled or min_dist >= 100:
-        return  # 远 / 未启用 → 直接返回，不动空调
+    if ac_off_enabled and min_dist < 100 and not ty_ac_off_sent:
+        ty_ac_off_sent = True
+        from broadlinkac_core.ac_control import send_ac
+        devices = _cfg.config.get("devices", {})
+        offline_count = off_count = 0
+        for mac, dev in devices.items():
+            name = dev.get("name", mac[:8])
+            online = not _cfg._online_macs or mac in _cfg._online_macs
+            if not online:
+                offline_count += 1
+                continue
+            try:
+                send_ac("off", "cool", 26, "auto", source="台风", mac=mac)
+                write_log_func("空调", f"[{datetime.now():%H:%M}] 台风靠近（距{min_dist}km）→ [{name}] 已自动关机")
+                off_count += 1
+            except Exception as e:
+                write_log_func("系统", f"台风关机失败 [{name}]: {e}")
+        write_log_func("系统", f"[{datetime.now():%H:%M}] 台风自动关机完成: 关闭 {off_count} 台, 离线 {offline_count} 台")
+    elif min_dist >= 100:
+        ty_ac_off_sent = False
 
-    # < 100km 且功能开启：强制发关（不查 power 状态，台风安全优先）
-    from broadlinkac_core.ac_control import send_ac
-    devices = _cfg.config.get("devices", {})
-    offline_count = off_count = 0
-    for mac, dev in devices.items():
-        name = dev.get("name", mac[:8])
-        online = not _cfg._online_macs or mac in _cfg._online_macs
-        if not online:
-            offline_count += 1
-            continue
-        try:
-            send_ac("off", "cool", 26, "auto", source="台风", mac=mac)
-            write_log_func("空调", f"[{datetime.now():%H:%M}] 台风自动关机")
-            off_count += 1
-        except Exception as e:
-            write_log_func("系统", f"台风关机失败 [{name}]: {e}")
-    write_log_func("系统", f"[{datetime.now():%H:%M}] 台风自动关机完成: 关闭 {off_count} 台, 离线 {offline_count} 台")
+    return alerts, ty_ac_off_sent

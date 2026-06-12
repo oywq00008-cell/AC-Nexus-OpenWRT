@@ -14,8 +14,6 @@
 .ac-status-text{font-size:12px;color:var(--cbi-text-secondary,#666)}
 .ac-power-btn{width:72px;height:72px;border-radius:50%;border:1px solid var(--border,#ddd);font-size:28px;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;margin:16px auto;color:var(--cbi-text-secondary,#999);background:#fff}
 .ac-power-btn{line-height:1;padding:0}
-/* ▶ 字符视觉重心偏左下，用 transform 推回视觉中心 */
-.ac-power-btn>*{transform:translate(2px,-1px);display:block}
 .ac-power-btn:active{background:#e94560;color:#fff;border-color:#e94560;transform:scale(.92)}
 .ac-power-toggle{flex:1;padding:8px 4px;border:1px solid #e94560;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;background:var(--cbi-background,#f5f5f5);color:#e94560}
 .ac-power-toggle.on{background:#e94560;color:#fff;font-weight:600}
@@ -104,7 +102,7 @@
     </div>
     <div><span class="ac-status-dot ac-dot-offline" id="statusDot"></span></div>
   </div>
-  <button class="ac-power-btn" id="sendBtn" onclick="doSend()"><span>&#x25B6;</span></button>
+  <button class="ac-power-btn" id="sendBtn" onclick="doSend()"><svg xmlns="http://www.w3.org/2000/svg" height="30" viewBox="0 -960 960 960" width="30" fill="currentColor" style="transform:rotate(-45deg) translate(1px,-1px)"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg></button>
 
   <div class="ac-mode-row">
     <button class="ac-power-toggle" id="powerToggleBtn" onclick="togglePower()">电源关</button>
@@ -295,8 +293,8 @@ function updateStatus(d) {
   var fb = document.querySelector('.ac-fan-btn[data-fan="' + current.fan + '"]');
   if (fb) fb.classList.add('active');
 
-  var wt = (d.weather && d.weather.temp) ? d.weather.temp : '--';
-  document.getElementById('outdoorTemp').textContent = wt + '\u00b0';
+  var wt = (d.weather && d.weather.temp != null) ? d.weather.temp : '--';
+  document.getElementById('outdoorTemp').textContent = wt !== '--' ? wt + '\u00b0' : wt;
   document.getElementById('outdoorHumid').textContent = ((d.weather && d.weather.humidity) ? d.weather.humidity : '--') + '%';
 
   var sd = d.storm_dist || 99999;
@@ -447,8 +445,17 @@ function downloadLog() {
 // ── 定时弹窗 ──
 function fillScheduleForm() {
   var d = statusData;
-  var dev = (d && d.devices && d.devices.length > 0) ? d.devices[0].name : '--';
-  document.getElementById('schedDevName').textContent = dev;
+  var sel = document.getElementById('devSelect');
+  var devName = '--';
+  // 取当前选中设备名，而非始终取 devices[0]
+  if (d && d.devices && d.devices.length > 0) {
+    var curMac = current.devMac || '';
+    for (var i = 0; i < d.devices.length; i++) {
+      if (d.devices[i].mac === curMac) { devName = d.devices[i].name; break; }
+    }
+    if (devName === '--') devName = d.devices[0].name;
+  }
+  document.getElementById('schedDevName').textContent = devName;
   var sc = d.schedule || {};
   document.getElementById('schedEnabled').checked = !!sc.enabled;
   document.getElementById('schedOnTime').value = sc.on_time || '10:00';
@@ -531,8 +538,15 @@ function saveSchedule() {
 // ── 设备设置弹窗 ──
 function fillDeviceForm() {
   var d = statusData;
-  var dev = (d && d.devices && d.devices.length > 0) ? d.devices[0].name : '--';
-  document.getElementById('devSetName').textContent = dev;
+  var devName = '--';
+  if (d && d.devices && d.devices.length > 0) {
+    var curMac = current.devMac || '';
+    for (var i = 0; i < d.devices.length; i++) {
+      if (d.devices[i].mac === curMac) { devName = d.devices[i].name; break; }
+    }
+    if (devName === '--') devName = d.devices[0].name;
+  }
+  document.getElementById('devSetName').textContent = devName;
   var loc = d.location || {};
   document.getElementById('locCurrent').textContent = loc.name ? loc.name + '  ' + loc.lat.toFixed(4) + '°N, ' + loc.lon.toFixed(4) + '°E' : '未设置';
   var info = d.device_info || {};

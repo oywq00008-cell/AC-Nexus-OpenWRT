@@ -91,7 +91,7 @@ for name, st in entries:
     with open(name, 'rb') as f:
         result += ar_pad(f.read())
 
-out = '../broadlinkac_3.1-1_aarch64_cortex-a55.ipk'
+out = '../broadlinkac_3.1-1_aarch64_generic.ipk'
 with open(out, 'wb') as f:
     f.write(result)
 print(f'Done: {out} ({len(result)} bytes)')
