@@ -295,8 +295,8 @@ function updateStatus(d) {
   var fb = document.querySelector('.ac-fan-btn[data-fan="' + current.fan + '"]');
   if (fb) fb.classList.add('active');
 
-  var wt = (d.weather && d.weather.temp) ? d.weather.temp : '--';
-  document.getElementById('outdoorTemp').textContent = wt + '\u00b0';
+  var wt = (d.weather && d.weather.temp != null) ? d.weather.temp : '--';
+  document.getElementById('outdoorTemp').textContent = wt !== '--' ? wt + '\u00b0' : wt;
   document.getElementById('outdoorHumid').textContent = ((d.weather && d.weather.humidity) ? d.weather.humidity : '--') + '%';
 
   var sd = d.storm_dist || 99999;
@@ -447,8 +447,17 @@ function downloadLog() {
 // ── 定时弹窗 ──
 function fillScheduleForm() {
   var d = statusData;
-  var dev = (d && d.devices && d.devices.length > 0) ? d.devices[0].name : '--';
-  document.getElementById('schedDevName').textContent = dev;
+  var sel = document.getElementById('devSelect');
+  var devName = '--';
+  // 取当前选中设备名，而非始终取 devices[0]
+  if (d && d.devices && d.devices.length > 0) {
+    var curMac = current.devMac || '';
+    for (var i = 0; i < d.devices.length; i++) {
+      if (d.devices[i].mac === curMac) { devName = d.devices[i].name; break; }
+    }
+    if (devName === '--') devName = d.devices[0].name;
+  }
+  document.getElementById('schedDevName').textContent = devName;
   var sc = d.schedule || {};
   document.getElementById('schedEnabled').checked = !!sc.enabled;
   document.getElementById('schedOnTime').value = sc.on_time || '10:00';
@@ -531,8 +540,15 @@ function saveSchedule() {
 // ── 设备设置弹窗 ──
 function fillDeviceForm() {
   var d = statusData;
-  var dev = (d && d.devices && d.devices.length > 0) ? d.devices[0].name : '--';
-  document.getElementById('devSetName').textContent = dev;
+  var devName = '--';
+  if (d && d.devices && d.devices.length > 0) {
+    var curMac = current.devMac || '';
+    for (var i = 0; i < d.devices.length; i++) {
+      if (d.devices[i].mac === curMac) { devName = d.devices[i].name; break; }
+    }
+    if (devName === '--') devName = d.devices[0].name;
+  }
+  document.getElementById('devSetName').textContent = devName;
   var loc = d.location || {};
   document.getElementById('locCurrent').textContent = loc.name ? loc.name + '  ' + loc.lat.toFixed(4) + '°N, ' + loc.lon.toFixed(4) + '°E' : '未设置';
   var info = d.device_info || {};
