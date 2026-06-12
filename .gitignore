@@ -12,3 +12,4 @@ broadlinkac-openwrt.tar.gz
 broadlinkac_*.ipk
 .idea/
 .vscode/
+router_sync.py
