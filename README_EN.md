@@ -1,33 +1,38 @@
+[中文](README.md) / [English](README_EN.md)
+
 # BroadlinkAC-OpenWRT
 
-The Broadlink fully automatic air conditioning control plugin for OpenWRT routers automatically acquires weather data, enabling the router to automatically manage and adjust the air conditioning and temperature around the clock.
+> OpenWRT router plugin for fully automatic air conditioning control via Broadlink RM. Weather-aware, storm-protected, 24/7 unattended operation.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenWRT](https://img.shields.io/badge/OpenWRT-21%2B-blue.svg)]()
 [![Python](https://img.shields.io/badge/Python-3.8%2B-green.svg)]()
-![Global settings](全局设置.png)
-![control Panel](控制面板.png)
+
 ## ✨ Features
 
-- 🎛️ **LuCI control panel** — Web UI for AC control, device config, log viewing
-- 🌤️ **Dual weather source** — Baidu + QWeather, automatic fallback + stale-cache rescue
-- 🌀 **Typhoon auto-protection** — Force-shutdown all ACs when storm < 100km (coastal-user safety design)
-- ⏰ **Scheduling + auto-adjust** — 2h relative interval + fixed-time on/off
-- 🛡️ **procd daemon** — System service supervision + boot auto-start + exception fallback
-- 📥 **Log download** — 14-day date grid + Markdown file download
-- 🔌 **UCI bidirectional sync** — CBI settings ↔ config.json auto-sync
+- 🎛️ **LuCI Control Panel** — Web UI for AC control, device config, log viewing
+- 🌤️ **Dual Weather Source** — Baidu + QWeather, auto-fallback + stale-cache rescue
+- 🌀 **Storm Auto-Protection** — Force-shutdown all ACs when storm < 100km
+- ⏰ **Scheduling + Auto-Adjust** — Timed on/off + temperature-adaptive mode switching
+- 🛡️ **procd Daemon** — Boot auto-start + crash recovery + graceful degradation
+- 📥 **Log Download** — 14-day date grid + Markdown file download
+
+![Control Panel](控制面板.png) ![Global Settings](全局设置.png)
 
 ## 🚀 Quick Start
 
-### 1. Download IPK
+### 1. Download & Install
 
-Grab the latest `.ipk` from [Releases](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/releases):
+Grab the latest `broadlinkac_3.1-1_aarch64_generic.ipk` and `install.sh` from [Releases](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/releases).
+
+Upload both files to your router's `/tmp/` directory, then SSH in and run:
 
 ```bash
-scp broadlinkac_3.1-1_*.ipk root@192.168.1.1:/tmp/
-ssh root@192.168.1.1
-opkg install /tmp/broadlinkac_3.1-1_*.ipk
+cd /tmp
+bash install.sh
 ```
+
+`install.sh` handles everything: system dependencies → IPK install → hvac_ir via pip.
 
 ### 2. Open LuCI Control Panel
 
@@ -36,40 +41,33 @@ Navigate to: `http://192.168.1.1/cgi-bin/luci/admin/services/broadlinkac`
 ### 3. Configure API Key
 
 **Services → Broadlink AC Control → Settings**:
-- Baidu Weather API Key (apply [here](https://lbsyun.baidu.com/apiconsole/key)) — recommended
-- QWeather API Key + Host (apply [here](https://dev.qweather.com/)) — fallback
-- free!
 
-### 4. Scan LAN Devices
+| Source | Free Quota | Sign Up |
+|--------|-----------|---------|
+| Baidu Weather (recommended) | 150K calls/month | [Baidu Maps Console](https://lbsyun.baidu.com/apiconsole/key) |
+| QWeather (fallback) | 50K calls/month | [QWeather Console](https://console.qweather.com) |
 
-In the control panel, click `⚙️ Device Settings → 🔄 Scan Devices` to auto-discover Broadlink RM devices.
+### 4. Scan for Devices
+
+Click **Scan LAN Devices** in the control panel to auto-discover Broadlink RM.
 
 ## 🛠️ Compatibility
 
-| Item | Supported Version |
-|------|-------------------|
+| Item | Supported |
+|------|-----------|
 | OpenWRT | 21.02+ |
 | Python | 3.8+ |
 | LuCI | 19.07+ |
-| Broadlink devices | RM Mini 3 / RM4 Mini / RM Pro+ |
-| Architecture | aarch64 / armv7 / x86_64 |
+| Broadlink Devices | RM Mini 3 / RM4 Mini / RM Pro+ |
+| Architecture | aarch64_generic (A53/A55/A57/A72/A73/A76) |
 
 ## 📦 Manual IPK Build
 
 ```bash
 cd ipk-build
 python3 build_ipk.py
-# Output: broadlinkac_3.1-1_<arch>.ipk
+# Output: broadlinkac_3.1-1_aarch64_generic.ipk
 ```
-
-## 🔧 Dev Mode (Push Code to Router)
-
-```bash
-# After editing code, push to router via paramiko stdin pipe
-python router_sync.py
-```
-
-> Note: OpenWrt dropbear does NOT support SFTP, you MUST use stdin pipe.
 
 ## 📁 Directory Structure
 
@@ -79,43 +77,30 @@ broadlinkac/
 │   ├── etc/
 │   │   ├── config/broadlinkac          # UCI default config
 │   │   ├── init.d/broadlinkac          # procd daemon
-│   │   └── uci-defaults/99-broadlinkac # First-boot setup script
+│   │   └── uci-defaults/99-broadlinkac # First-boot setup
 │   └── usr/
-│       ├── lib/broadlinkac/            # Python core + protocols
-│       │   ├── broadlinkac_core/
-│       │   │   ├── ac_control.py
-│       │   │   ├── config.py
-│       │   │   ├── logger.py
-│       │   │   ├── scheduler.py
-│       │   │   ├── typhoon.py
-│       │   │   └── weather.py
+│       ├── lib/broadlinkac/            # Python core
+│       │   ├── broadlinkac_core/       # Control / Weather / Storm / Scheduler / Log
 │       │   ├── protocols/              # Custom IR protocols
-│       │   │   ├── haier.py
-│       │   │   ├── aux_ac.py
-│       │   │   └── panasonic.py
-│       │   ├── broadlinkac_api.py      # LuCI-callable CLI
-│       │   └── broadlinkac_service.py  # procd backend daemon
-│       └── lib/lua/luci/               # LuCI views
+│       │   ├── broadlinkac_api.py      # LuCI CLI interface
+│       │   └── broadlinkac_service.py  # procd background daemon
+│       └── lib/lua/luci/               # LuCI pages
 │           ├── controller/broadlinkac.lua
 │           ├── model/cbi/broadlinkac.lua
 │           └── view/broadlinkac/dashboard.htm
-├── Makefile                            # IPK build metadata
-└── ipk-build/build_ipk.py              # Build script
+├── ipk-build/                          # IPK build scripts
+│   ├── build_ipk.py
+│   └── CONTROL/{control,postinst}
+└── install.sh                          # One-click installer
 ```
 
 ## 🔗 Sister Project
 
-**Desktop app and Agent**: [BroadlinkAC-For-Agent](https://github.com/oywq00008-cell/BroadlinkAC-For-Agent)
-- Cross-platform desktop GUI (Windows / macOS / Linux)
-- AI Agent Skill interface
-- More features, better experience, highly recommended!
+**[BroadlinkAC-For-Agent](https://github.com/oywq00008-cell/BroadlinkAC-For-Agent)** — Cross-platform desktop GUI + AI Agent interface (Windows / macOS / Linux).
 
-**Router app (this repo)**:
-- 24/7 headless operation
-- Weather/typhoon auto-response
-- Perfect for "install and forget" home setups
-
-Both projects **share core algorithms** (ac_control / typhoon / weather / scheduler) but **evolve independently** — the router side focuses on "safety first + graceful degradation", the desktop side focuses on "user config + interactive popups".
+Both projects share core algorithms, evolving independently:
+- Desktop: interactive UI + rich user controls
+- Router: 24/7 unattended + automatic response
 
 ## 📝 License
 
@@ -123,6 +108,6 @@ MIT — see [LICENSE](LICENSE)
 
 ## 🙏 Acknowledgments
 
-- IR protocols based on [python-broadlink](https://github.com/mjg59/python-broadlink) and [hvac_ir](https://github.com/nicko858/hvac_ir)
-- Weather data from Baidu Maps Open Platform + QWeather
-- Typhoon data from [NMC](http://www.nmc.cn) / [NHC](https://www.nhc.noaa.gov/)
+- IR protocols: [python-broadlink](https://github.com/mjg59/python-broadlink) + [hvac_ir](https://github.com/nicko858/hvac_ir)
+- Weather data: Baidu Maps Open Platform + QWeather
+- Storm data: China NMC + US NHC
