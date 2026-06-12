@@ -11,7 +11,7 @@ from broadlinkac_core.weather import fetch_weather
 from broadlinkac_core.ac_control import send_ac, decide_ac, MODE_KEYS
 from broadlinkac_core.logger import write_log, get_last_ac_state
 
-_sched_lock = threading.Lock()
+_sched_lock = threading.RLock()  # 可重入锁，register_all_jobs 内部自锁
 
 
 def _device_online(mac):
@@ -84,27 +84,12 @@ def scheduled_off_job(mac):
 
 
 def auto_adjust_job(mac):
-    """每2小时自动调温：读日志判状态 → 跑规则 → 温度无变化则跳过
-
-    拦截规则：
-    - 台风 < 100km → 跳过（信任 30min 巡检已强制关过，避免发开机打脸）
-    - 空调 power=off → 跳过（用户主动关了就不打扰）
-    - 其余路径：读天气 → 跑规则 → 改模式/温度就发码，不变就跳过
-    """
+    """每2小时自动调温：读日志判状态 → 跑规则 → 温度无变化则跳过"""
     dev = _cfg.config.get("devices", {}).get(mac, {})
     name = dev.get("name", mac[:8])
     if not _device_online(mac):
         write_log("系统", f"🔄 [{name}] 自动调温 → 设备离线，跳过")
         return
-
-    # 台风 < 100km：跳过（30min 巡检会强制关空调，这里开机是反行为）
-    from broadlinkac_core.typhoon import typhoon_threat_distance
-    min_dist, storm_name = typhoon_threat_distance()
-    if min_dist < 100:
-        write_log("系统", f"🔄 [{name}] 自动调温: 风暴 {storm_name} 距 {min_dist}km，跳过")
-        return
-
-    # 空调已关：跳过
     state = get_last_ac_state()
     if state["power"] == "off":
         return
@@ -133,54 +118,93 @@ def auto_adjust_job(mac):
         write_log("系统", f"自动调温失败: {e}")
 
 
-def register_all_jobs():
-    """注册所有设备的 AC 定时任务（在 _sched_lock 内调用）
+def _scheduled_on_wrapper(mac, days):
+    """仅在指定星期几执行开机"""
+    if datetime.now().isoweekday() in days:
+        return scheduled_job(mac)
 
-    设计说明：
-    - scheduled_job / scheduled_off_job：用户指定具体时间，固定触发
-    - auto_adjust_job：每 2 小时相对间隔触发（开机后 2h、4h、6h…）
-      用 `sch.every(2).hours` 而不是固定整点，因为用户活动时间不固定
-      （有人 6 点起床、有人 14 点活动、有人凌晨加班），全天 24h 都可能需要
-      相对间隔 = "从上次执行算起 2 小时"，自然贴合空调使用场景
-      schedule 库底层在 `run_pending()` 后会更新 last_run，
-      scheduler_loop 用 `sch.idle_seconds()` 精确计算下次等待时间
-    """
-    sch.clear()
-    for mac, dev in _cfg.config.get("devices", {}).items():
-        if dev.get("schedule_enabled", True):
-            sch.every().day.at(dev.get("trigger_time", "12:00")).do(scheduled_job, mac=mac)
-        if dev.get("off_enabled"):
-            sch.every().day.at(dev.get("off_time", "22:00")).do(scheduled_off_job, mac=mac)
-        if dev.get("auto_adjust", True):
-            # 相对间隔 2 小时（不是固定整点）—— 关机时 auto_adjust_job 内部
-            # 读日志判 power=off 直接 return，下次循环照常推进
-            sch.every(2).hours.do(auto_adjust_job, mac=mac)
+
+def _scheduled_off_wrapper(mac, days):
+    """仅在指定星期几执行关机"""
+    if datetime.now().isoweekday() in days:
+        return scheduled_off_job(mac)
+
+
+def _migrate_schedule_config():
+    """将旧字段迁移到模板结构（自动执行一次）"""
+    if _cfg.config.get("_schedule_migrated"):
+        return
+    old_trigger = _cfg.config.get("trigger_time")
+    old_off = _cfg.config.get("off_time")
+    old_on_enabled = _cfg.config.get("schedule_enabled", False)
+    old_off_enabled = _cfg.config.get("off_enabled", False)
+    if old_trigger or old_off:
+        slots = []
+        if old_on_enabled and old_trigger:
+            slots.append({"on": old_trigger, "off": old_off if old_off_enabled else None})
+        elif old_off_enabled and old_off:
+            slots.append({"on": old_off, "off": None})
+        if slots:
+            _cfg.config.setdefault("schedule_templates", {})["默认"] = {
+                "groups": [{"days": [1, 2, 3, 4, 5, 6, 7], "slots": slots}]
+            }
+            mac = _cfg.config.get("current_device_mac")
+            if mac:
+                _cfg.config.setdefault("devices", {}).setdefault(mac, {})["active_template"] = "默认"
+        for k in ("trigger_time", "off_time", "schedule_enabled", "off_enabled"):
+            _cfg.config.pop(k, None)
+    # 迁移旧 days/slots 结构 → groups
+    for name, tmpl in (_cfg.config.get("schedule_templates", {}) or {}).items():
+        if "groups" not in tmpl and "days" in tmpl:
+            tmpl["groups"] = [{"days": tmpl.pop("days", [1,2,3,4,5]),
+                                "slots": tmpl.pop("slots", [])}]
+    _cfg.config["_schedule_migrated"] = True
+    from broadlinkac_core.config import save_config
+    save_config(_cfg.config)
+
+
+def register_all_jobs():
+    """注册所有设备的 AC 定时任务，内部持有 _sched_lock"""
+    with _sched_lock:
+        sch.clear()
+        _migrate_schedule_config()
+        templates = _cfg.config.get("schedule_templates", {}) or {}
+        for mac, dev in _cfg.config.get("devices", {}).items():
+            tmpl_name = dev.get("active_template")
+            tmpl = templates.get(tmpl_name) if tmpl_name else None
+            if tmpl and dev.get("schedule_enabled", True):
+                groups = tmpl.get("groups", [])
+                # 向后兼容：无 groups 但有 days
+                if not groups and tmpl.get("days"):
+                    groups = [{"days": tmpl["days"], "slots": tmpl.get("slots", [])}]
+                for grp in groups:
+                    days = set(grp.get("days", []))
+                    for slot in grp.get("slots", []):
+                        on_t = slot.get("on")
+                        off_t = slot.get("off")
+                        if on_t and slot.get("on_enabled", True):
+                            sch.every().day.at(on_t).do(_scheduled_on_wrapper, mac=mac, days=days)
+                        if off_t and slot.get("off_enabled", True):
+                            sch.every().day.at(off_t).do(_scheduled_off_wrapper, mac=mac, days=days)
+            else:
+                # 向后兼容：没有模板时用旧字段
+                if dev.get("schedule_enabled", True) and dev.get("trigger_time"):
+                    sch.every().day.at(dev["trigger_time"]).do(scheduled_job, mac=mac)
+                if dev.get("off_enabled") and dev.get("off_time"):
+                    sch.every().day.at(dev["off_time"]).do(scheduled_off_job, mac=mac)
+            if dev.get("auto_adjust", True):
+                sch.every(2).hours.do(auto_adjust_job, mac=mac)
 
 
 def scheduler_loop():
-    """任务循环：每次 run_pending() 后用 sch.idle_seconds() 精确睡眠
-
-    schedule 库会在 run_pending() 中：
-    - 触发所有到期任务
-    - 更新每个 job 的 last_run
-    - idle_seconds() 返回「最近 job 触发 → 下次 job 触发」的精确秒数
-
-    所以 auto_adjust_job 即使 power=off 提前 return，循环时间也照常推进
-    （这正是用户要求的行为：开启了就按 2h 节奏跑，关机状态就跳过）
-    """
     register_all_jobs()
     while True:
         with _sched_lock:
             sch.run_pending()
-        idle = sch.idle_seconds()
-        # idle_seconds() 可能为 None（库刚启动还没算过）或负数
-        # 兜底 15s 防止空转 CPU
-        sleep_sec = max(idle, 0) if idle is not None else 15
-        time.sleep(sleep_sec)
+        time.sleep(max(sch.idle_seconds(), 0) if sch.idle_seconds() is not None else 15)
 
 
 _sched_started = False
-_data_loops_started = False
 
 
 def start_scheduler():
@@ -190,74 +214,3 @@ def start_scheduler():
         return
     _sched_started = True
     threading.Thread(target=scheduler_loop, daemon=True).start()
-
-
-def re_register():
-    """设备增删后让 schedule 库立即重读 config（在 _sched_lock 内）"""
-    with _sched_lock:
-        register_all_jobs()
-
-
-# ── 数据独立循环（与 schedule 库完全隔离）──
-
-def _weather_loop():
-    """每 10 分钟拉一次天气 → 写入 _cfg._cached_temp
-
-    首次先 sleep 一轮：init() 已立即拉过一次，避免重复拉取。
-    拉到的数据同时通过 _set_last_weather 写一份给 fetch_weather 兜底用。
-    """
-    import time
-    while True:
-        time.sleep(600)
-        try:
-            w = fetch_weather()
-            if w and w.get("temp"):
-                _cfg._cached_temp = float(w["temp"])
-            # 不管成功失败，都尝试更新兜底缓存（让 _last_weather 始终是最近一次成功值）
-            if w:
-                from broadlinkac_core.weather import _set_last_weather
-                _set_last_weather(w)
-        except Exception as e:
-            try:
-                from broadlinkac_core.logger import write_log
-                write_log("系统", f"天气拉取失败: {e}")
-            except Exception:
-                pass
-
-
-def _typhoon_loop():
-    """每 30 分钟拉一次台风 → 判定 < 100km 强制关全部
-
-    首次先 sleep 一轮：init() 已立即拉过一次，避免重复拉取与重复判定。
-
-    judge_and_shutdown 现在不用维护 ty_ac_off_sent 标志位了，
-    每次循环内部读 get_last_ac_state() 查真实状态决定要不要发码。
-    """
-    import time
-    from broadlinkac_core.typhoon import fetch_and_cache
-    from broadlinkac_core.logger import write_log
-    while True:
-        time.sleep(1800)
-        try:
-            fetch_and_cache()
-            _cfg.typhoon_judge_and_shutdown(write_log)
-        except Exception as e:
-            try:
-                write_log("系统", f"台风拉取失败: {e}")
-            except Exception:
-                pass
-
-
-def start_data_loops():
-    """启动天气/台风独立后台循环（幂等）"""
-    global _data_loops_started
-    if _data_loops_started:
-        return
-    _data_loops_started = True
-    # 让定时开关机/调温也能用上数据
-    import broadlinkac_core.config as _cfg
-    _cfg.typhoon_judge_and_shutdown = __import__(
-        "broadlinkac_core.typhoon", fromlist=["judge_and_shutdown"]
-    ).judge_and_shutdown
-    threading.Thread(target=_weather_loop, daemon=True).start()
-    threading.Thread(target=_typhoon_loop, daemon=True).start()
