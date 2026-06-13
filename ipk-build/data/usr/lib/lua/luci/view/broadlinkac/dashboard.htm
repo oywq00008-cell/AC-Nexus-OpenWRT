@@ -820,7 +820,10 @@ function fillDeviceForm() {
     var opt = document.createElement('option');
     opt.value = b[0];
     opt.textContent = b[1];
-    if (b[0] === (info.brand || 'gree')) opt.selected = true;
+    // 优先按显示名匹配，回退协议值
+    var displayMatch = (info.brand_display && info.brand_display === b[1]);
+    var valueMatch = (!info.brand_display && b[0] === (info.brand || 'gree'));
+    if (displayMatch || valueMatch) opt.selected = true;
     sel.appendChild(opt);
   }
   document.getElementById('searchResults').style.display = 'none';
@@ -861,9 +864,11 @@ function selectLocation(lat, lon, name) {
 function saveDevice() {
   var info = statusData.device_info || {};
   var newName = document.getElementById('devNameInput').value.trim();
+  var sel = document.getElementById('devBrand');
   var data = {
     mac: info.mac || current.devMac || '',
-    brand: document.getElementById('devBrand').value
+    brand: sel.value,
+    brand_display: sel.options[sel.selectedIndex].text
   };
   if (newName) data.name = newName;
   api('save_device ' + b64(JSON.stringify(data))).then(function(d){

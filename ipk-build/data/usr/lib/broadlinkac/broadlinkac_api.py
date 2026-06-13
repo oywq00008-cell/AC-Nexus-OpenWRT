@@ -215,6 +215,7 @@ if cmd == "status" or cmd == "refresh":
     if current_dev:
         result["device_info"] = {
             "brand": current_dev.get("brand", "gree"),
+            "brand_display": current_dev.get("brand_display", ""),
             "host": current_dev.get("host", ""),
             "port": current_dev.get("port", 80),
             "mac": current_dev.get("mac", current_mac),
@@ -397,6 +398,8 @@ elif cmd.startswith("save_device "):
             else:
                 if "brand" in data:
                     dev["brand"] = data["brand"]
+                if "brand_display" in data:
+                    dev["brand_display"] = data["brand_display"]
                 save_config(cfg, sync_device=False)
                 _uci_set_device(mac, dev)
                 result = {"ok": True}

@@ -123,7 +123,7 @@ def switch_device(mac):
     apply_config()
 
 
-DEVICE_KEYS = ("host", "port", "mac", "model", "name", "brand", "fan",
+DEVICE_KEYS = ("host", "port", "mac", "model", "name", "brand", "brand_display", "fan",
                "schedule_enabled", "trigger_time", "off_enabled", "off_time",
                "auto_adjust", "temp_rules")
 
