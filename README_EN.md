@@ -14,18 +14,24 @@
 - 🌤️ **Dual Weather Source** — Baidu + QWeather, auto-fallback + stale-cache rescue
 - 🌀 **Storm Auto-Protection** — Force-shutdown all ACs when storm < 100km
 - ⏰ **Scheduling + Auto-Adjust** — Timed on/off + temperature-adaptive mode switching
-- 🛡️ **procd Daemon** — Boot auto-start + crash recovery + graceful degradation
+- 🛡️ **Built-in hvac_ir** — 13 IR protocols bundled, zero pip dependencies
 - 📥 **Log Download** — 14-day date grid + Markdown file download
 
-![Control Panel](控制面板.png) ![Global Settings](全局设置.png)
+## 📸 Screenshots
+
+| Dashboard | Schedule Templates |
+|-----------|-------------------|
+| ![](主界面.png) | ![](定时.png) |
+
+| Temperature Rules | Device Settings |
+|-------------------|-----------------|
+| ![](规则.png) | ![](设备设置.png) |
 
 ## 🚀 Quick Start
 
 ### 1. Download & Install
 
-Grab the latest `broadlinkac_3.1-1_aarch64_generic.ipk` and `install.sh` from [Releases](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/releases).
-
-Upload both files to your router's `/tmp/` directory, then SSH in and run:
+Choose one of the following methods:
 
 ```bash
 cd /tmp
