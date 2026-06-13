@@ -1,67 +1,47 @@
-# BroadlinkAC — AI 智能空调控制器
+[中文](README.md) / [English](README_EN.md)
 
-> 把普通空调变成智能空调 —— 基于 OpenWRT + Broadlink RM 红外遥控器
+# BroadlinkAC-OpenWRT
 
----
+> OpenWRT 路由器端 Broadlink 全自动空调控制插件。自动获取天气数据，7×24小时无人值守管控空调。
 
-## 功能
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![OpenWRT](https://img.shields.io/badge/OpenWRT-21%2B-blue.svg)]()
+[![Python](https://img.shields.io/badge/Python-3.8%2B-green.svg)]()
 
-- 🎮 Web 控制面板：手机/电脑遥控空调，调温度、切换模式
-- 🌤️ 自动调温：外面热自动开制冷，外面冷自动开制热
-- 🌀 台风自动关：台风靠近自动关空调
-- ⏰ 多场景定时模板：工作日一套、周末一套，自由切换
-- 🏷️ 多设备管理：支持多台博联设备，自动去重，可自定义昵称
-- 📊 环境监测：实时温度、湿度、天气状态、风暴距离
-- 📋 操作日志：可下载到本地查看
+## ✨ 特性
 
----
+- 🎛️ **LuCI 控制面板** — Web 界面遥控空调、定时模板、温度规则、设备管理
+- 🌤️ **天气双数据源** — 百度 + 和风，自动回退 + 旧值兜底
+- 🌀 **风暴自动保护** — 台风距离 < 100km 强制关闭所有空调
+- ⏰ **多日期组定时模板** — 工作日一套、周末一套，支持多时间段
+- 🌡️ **独立温度规则** — 定时和调温共用，自动根据室外温度决策
+- 🏷️ **多设备管理** — 支持多台博联，自动去重，自定义昵称
+- 🛡️ **内置 hvac_ir** — 13 种红外协议直接打包，零 pip 依赖
+- 📥 **日志下载** — 14 天日期网格 + Markdown 文件下载
 
-## 硬件要求
+## 🚀 快速开始
 
-| 物品 | 说明 |
-|------|------|
-| OpenWRT 路由器 | GL-MT6000 或其他支持 opkg 的路由器 |
-| Broadlink RM 红外遥控器 | RM4 Mini / RM4 Pro / RM Mini 3 等 |
+### 方式一：IPK 安装（推荐）
 
----
+从 [Releases](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/releases) 下载 `broadlinkac_3.2-1_all.ipk`。
 
-## 安装（3 步）
+打开路由器 LuCI 网页 → 系统 → 软件包 → 上传软件包，选择 IPK 文件即可自动安装。
 
-### 1. 下载
+### 方式二：.run 一键安装
 
-从 [GitHub Releases](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/releases) 下载 `BroadlinkAC-3.2.zip`，解压得到 `broadlinkac_3.2.run` 和 `使用说明.txt`。
-
-### 2. 上传到路由器
-
-打开终端（命令行），根据你的操作系统执行：
-
-**macOS / Linux：**
+从 [Releases](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/releases) 下载 `BroadlinkAC-3.2.zip`，解压后：
 
 ```bash
+# 上传到路由器
 scp broadlinkac_3.2.run root@你的路由器IP:/tmp/
-```
 
-**Windows：**
-
-```powershell
-scp broadlinkac_3.2.run root@你的路由器IP:/tmp/
-```
-
-> 输入路由器密码即可（密码不会显示，这是正常的）。
-> 
-> 如果你的路由器 IP 不知道，通常在路由器背面贴纸上，一般是 `192.168.1.1` 或 `192.168.8.1`。
-
-### 3. 安装
-
-上传完成后，继续在终端执行：
-
-```bash
+# 执行安装
 ssh root@你的路由器IP "bash /tmp/broadlinkac_3.2.run"
 ```
 
-> 全自动安装，1-2 分钟完成。
+> 详细步骤见压缩包内的 `使用说明.txt`（含 macOS / Windows / Linux 三平台教程）
 
-### 4. 开始使用
+### 开始使用
 
 浏览器打开 `http://你的路由器IP/cgi-bin/luci/admin/services/broadlinkac`
 
@@ -71,37 +51,39 @@ ssh root@你的路由器IP "bash /tmp/broadlinkac_3.2.run"
 3. 点击「扫描设备」发现博联 RM
 4. 在设备设置中选择你的空调品牌
 
----
-
-## 支持的空调品牌
+## 🎛️ 支持的空调品牌
 
 格力、美的、华凌、小米、海尔、海信、日立、大金、三菱、松下、富士通、奥克斯、巴鲁、开利、现代、Fuego
 
----
-
-## 项目结构
+## 📂 项目结构
 
 ```
 ├── broadlinkac/files/          # 插件源代码
 │   ├── usr/lib/broadlinkac/    # Python 后端
-│   ├── usr/lib/lua/luci/       # LuCI 界面
-│   └── etc/                    # 配置文件
-├── build_run.sh                # .run 安装包构建脚本
-├── installer_template.sh        # 安装包模板
-├── install_manual.sh           # 手动安装脚本（开发者用）
+│   │   ├── hvac_ir/            # 红外协议（内置）
+│   │   ├── protocols/          # 自定义协议
+│   │   └── broadlinkac_core/   # 核心逻辑
+│   └── usr/lib/lua/luci/       # LuCI 界面
+├── build_ipk.py                # IPK 构建脚本
+├── build_run.sh                # .run 构建脚本
+├── install_manual.sh           # 手动安装脚本
 └── docs/                       # 文档
 ```
 
----
+## 🔗 姊妹项目
 
-## 从源码安装（开发者）
+**[BroadlinkAC-For-Agent](https://github.com/oywq00008-cell/BroadlinkAC-For-Agent)** — 跨平台桌面 GUI + AI Agent 接口（Windows / macOS / Linux）。
 
-```bash
-bash install_manual.sh 你的路由器IP
-```
+两个项目共享核心算法，独立进化：
+- 桌面端：用户主动操作 + 丰富交互
+- 路由器端：7×24 无人值守 + 自动响应
 
----
+## 📝 License
 
-> 📖 详细使用文档：[docs/使用指南.md](docs/使用指南.md)
->
-> by 欧阳小白
+MIT — 详见 [LICENSE](LICENSE)
+
+## 🙏 致谢
+
+- 红外协议基于 [python-broadlink](https://github.com/mjg59/python-broadlink) 和 [hvac_ir](https://github.com/shprota/hvac_ir)
+- 天气数据来自百度地图开放平台 + 和风天气
+- 风暴数据来自中国中央气象台 (NMC) + 美国国家飓风中心 (NHC)
