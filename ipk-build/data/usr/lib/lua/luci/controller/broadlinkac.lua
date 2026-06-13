@@ -16,6 +16,9 @@ function index()
 
     entry({"admin", "services", "broadlinkac", "log_download"},
         call("log_download")).dependent = true
+
+    entry({"admin", "services", "broadlinkac", "download_guide"},
+        call("download_guide")).dependent = true
 end
 
 function api()
@@ -47,5 +50,20 @@ function log_download()
     f:close()
     luci.http.header("Content-Type", "text/markdown; charset=utf-8")
     luci.http.header("Content-Disposition", 'attachment; filename="broadlinkac-' .. date_str .. '.md"')
+    luci.http.write(content)
+end
+
+function download_guide()
+    local f = io.open("/usr/share/broadlinkac/docs/guide.md", "r")
+    if not f then
+        luci.http.status(404, "Not Found")
+        luci.http.prepare_content("text/plain; charset=utf-8")
+        luci.http.write("文档不存在")
+        return
+    end
+    local content = f:read("*all")
+    f:close()
+    luci.http.header("Content-Type", "text/markdown; charset=utf-8")
+    luci.http.header("Content-Disposition", "attachment; filename=\"BroadlinkAC-使用指南.md\"")
     luci.http.write(content)
 end

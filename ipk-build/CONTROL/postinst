@@ -1,7 +1,4 @@
 #!/bin/sh
-# Install hvac_ir after ipk install
-pathmunge() {
-    [ -d "$1" ] && echo "$1" >> /etc/opkg/broadlinkac.conf
-}
-pip3 install hvac_ir 2>/dev/null || echo "WARNING: pip3 install hvac_ir failed, install manually"
+# BroadlinkAC post-install script
+# hvac_ir is bundled in the IPK, no pip needed
 exit 0

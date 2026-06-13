@@ -12,14 +12,14 @@
 .ac-dot-online{background:#2ecc71;box-shadow:0 0 8px #2ecc71}
 .ac-dot-offline{background:#e74c3c}
 .ac-status-text{font-size:12px;color:var(--cbi-text-secondary,#666)}
-.ac-power-btn{width:72px;height:72px;border-radius:50%;border:1px solid var(--border,#ddd);font-size:28px;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;margin:16px auto;color:var(--cbi-text-secondary,#999);background:#fff}
+.ac-power-btn{width:72px;height:72px;border-radius:50%;border:1px solid var(--border,#ddd);font-size:28px;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;margin:8px auto;color:var(--cbi-text-secondary,#999);background:#fff}
 .ac-power-btn{line-height:1;padding:0}
 .ac-power-btn:active{background:#e94560;color:#fff;border-color:#e94560;transform:scale(.92)}
-.ac-power-toggle{flex:1;padding:8px 4px;border:1px solid #e94560;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;background:var(--cbi-background,#f5f5f5);color:#e94560}
+.ac-power-toggle{flex:1;padding:6px 4px;border:1px solid #e94560;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;background:var(--cbi-background,#f5f5f5);color:#e94560}
 .ac-power-toggle.on{background:#e94560;color:#fff;font-weight:600}
 .ac-power-toggle:active{transform:scale(.96)}
 .ac-mode-row{display:flex;gap:6px;justify-content:center}
-.ac-mode-btn{flex:1;padding:8px 4px;border:1px solid var(--border,#ddd);border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text-secondary,#666)}
+.ac-mode-btn{flex:1;padding:6px 4px;border:1px solid var(--border,#ddd);border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text-secondary,#666)}
 .ac-mode-btn.active[data-mode="cool"]{background:#3498db;color:#fff;border-color:#3498db;font-weight:600}
 .ac-mode-btn.active[data-mode="heat"]{background:#e67e22;color:#fff;border-color:#e67e22;font-weight:600}
 .ac-mode-btn.active[data-mode="dry"]{background:#fff;color:#333;border-color:#fff;font-weight:600}
@@ -47,7 +47,7 @@
 .ac-discover-item{padding:8px 10px;border:1px solid var(--border,#ddd);border-radius:6px;margin-bottom:6px;cursor:pointer;transition:all .2s;display:flex;justify-content:space-between;align-items:center;font-size:12px}
 .ac-discover-item:hover{background:var(--cbi-background-hover,#e8e8e8)}
 .ac-discover-mac{font-family:monospace;color:var(--cbi-text-secondary,#666);font-size:11px}
-.ac-toolbar-btn{background:var(--cbi-background,#f0f0f0);color:var(--cbi-text,#333);border:1px solid var(--border,#ddd);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;line-height:1}
+.ac-toolbar-btn{background:var(--cbi-background,#f0f0f0);color:var(--cbi-text,#333);border:1px solid var(--border,#ddd);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:13px;line-height:1;min-width:36px;text-align:center}
 .ac-toolbar-btn:hover{background:var(--cbi-background-hover,#e0e0e0)}
 .ac-sched-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border,#eee);font-size:13px;color:var(--cbi-text,#333)}
 /* 弹窗 */
@@ -79,17 +79,37 @@
 .ac-log-date.has-log{cursor:pointer;background:#fff;color:#e94560;border-color:#e94560;font-weight:600}
 .ac-log-date.has-log:hover{background:#e94560;color:#fff}
 .ac-log-date.selected{background:#e94560;color:#fff;border-color:#e94560}
+/* 帮助按钮 */
+.ac-help-btn{position:fixed;bottom:16px;right:16px;width:40px;height:40px;border-radius:50%;background:var(--cbi-background,#f5f5f5);border:1px solid var(--border,#ddd);font-size:20px;cursor:pointer;z-index:900;display:flex;align-items:center;justify-content:center;color:var(--cbi-text-secondary,#666);box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .2s}
+.ac-help-btn:hover{background:#e94560;color:#fff;border-color:#e94560}
+.ac-help-link{color:#e94560;text-decoration:underline;cursor:pointer;font-size:13px}
+/* 模板样式 */
+.ac-tmpl-row{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.ac-tmpl-row select{flex:1;min-width:0}
+.ac-tmpl-row button{padding:4px 8px;font-size:12px}
+.ac-day-row{display:flex;gap:2px;justify-content:center;margin-bottom:12px}
+.ac-day-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border,#ddd);font-size:10px;cursor:pointer;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text-secondary,#999);transition:all .15s;padding:0;display:flex;align-items:center;justify-content:center}
+.ac-day-btn.on{background:#e94560;color:#fff;border-color:#e94560;font-weight:600}
+.ac-slot-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:4px 0}
+.ac-slot-row input[type=text]{width:64px;text-align:center;padding:4px 6px;font-size:12px}
+.ac-slot-label{font-size:11px;color:var(--cbi-text-secondary,#666);min-width:20px}
+.ac-slot-del{background:none;border:none;color:#e74c3c;cursor:pointer;font-size:14px;padding:0 2px}
+.ac-group-card{border:1px solid var(--border,#ddd);border-radius:6px;padding:10px;margin-bottom:8px}
+.ac-group-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ac-group-header span{font-size:11px;color:var(--cbi-text-secondary,#666)}
 </style>
 
 <div class="ac-container">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-  <select id="devSelect" onchange="switchDevice(this.value)" style="font-size:11px;padding:2px 6px;border:1px solid var(--border,#ddd);border-radius:4px;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text,#333);display:none"></select>
+  <select id="devSelect" onchange="switchDevice(this.value)" style="font-size:11px;padding:2px 6px;border:1px solid var(--border,#ddd);border-radius:4px;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text,#333);display:none;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></select>
   <span style="display:flex;gap:4px;align-items:center">
     <span style="font-size:11px;color:var(--cbi-text-secondary)" id="refreshInfo"></span>
-    <button class="ac-toolbar-btn" onclick="openModal('schedule')" title="定时 & 调温">&#x23F0;</button>
-    <button class="ac-toolbar-btn" onclick="openModal('device')" title="设备设置">&#x2699;</button>
-    <button class="ac-toolbar-btn" onclick="openModal('log')" title="下载日志">&#x1F4CB;</button>
-    <button class="ac-toolbar-btn" onclick="loadAll(true)" title="刷新全部数据">&#x21BB;</button>
+    <button class="ac-toolbar-btn" onclick="openModal('schedule')" title="定时 & 调温" style="font-size:16px">&#x23F0;</button>
+    <button class="ac-toolbar-btn" onclick="openModal('rules')" title="温度规则" style="font-size:16px">&#x1F321;</button>
+    <button class="ac-toolbar-btn" onclick="openModal('device')" title="设备设置" style="font-size:16px">&#x1F527;</button>
+    <button class="ac-toolbar-btn" onclick="openModal('log')" title="下载日志" style="font-size:16px">&#x1F4CB;</button>
+    <button class="ac-toolbar-btn" onclick="discoverDevices()" title="扫描设备" style="font-size:16px">&#x1F50D;</button>
+    <button class="ac-toolbar-btn" onclick="loadAll(true)" title="刷新全部数据" style="font-size:16px">&#x21BB;</button>
   </span>
 </div>
 
@@ -102,7 +122,7 @@
     </div>
     <div><span class="ac-status-dot ac-dot-offline" id="statusDot"></span></div>
   </div>
-  <button class="ac-power-btn" id="sendBtn" onclick="doSend()"><svg xmlns="http://www.w3.org/2000/svg" height="30" viewBox="0 -960 960 960" width="30" fill="currentColor" style="transform:rotate(-45deg) translate(1px,-1px)"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg></button>
+  <button class="ac-power-btn" id="sendBtn" onclick="doSend()"><svg xmlns="http://www.w3.org/2000/svg" height="30" viewBox="0 -960 960 960" width="30" fill="currentColor" style="transform:rotate(-45deg) translate(5px,-1px)"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg></button>
 
   <div class="ac-mode-row">
     <button class="ac-power-toggle" id="powerToggleBtn" onclick="togglePower()">电源关</button>
@@ -127,45 +147,68 @@
   </div>
 
   <div class="ac-last-action" id="lastAction"></div>
-  <div style="text-align:center;margin-top:10px">
-    <button class="ac-toolbar-btn" onclick="discoverDevices()" style="padding:6px 16px">&#x1F50D; 扫描局域网设备</button>
-  </div>
   <div class="ac-discover-list" id="discoverList" style="display:none"></div>
 </div>
 
 <div class="ac-card">
-  <div class="ac-card-title">环境信息</div>
+  <div class="ac-card-title">环境信息 <span style="font-size:11px;color:var(--cbi-text-secondary);float:right" id="locName">--</span></div>
   <div class="ac-info-row">
     <div><div class="ac-info-val" id="outdoorTemp">--</div><div class="ac-info-label">室外温度</div></div>
+    <div><div class="ac-info-val" id="weatherText">--</div><div class="ac-info-label">天气</div></div>
     <div><div class="ac-info-val" id="outdoorHumid">--</div><div class="ac-info-label">湿度</div></div>
     <div><div class="ac-info-val" id="stormDist">--</div><div class="ac-info-label">风暴距离</div></div>
   </div>
   <div id="alertBox"></div>
 </div>
 
-<div class="ac-card" style="cursor:pointer" onclick="openModal('schedule')">
-  <div class="ac-card-title">定时设置 <span style="font-size:11px;color:var(--cbi-text-secondary);float:right">&#x23F0; 点击修改</span></div>
-  <div class="ac-sched-row"><span>定时开机</span><span id="schedOn">--</span></div>
-  <div class="ac-sched-row"><span>定时关机</span><span id="schedOff">--</span></div>
+<div class="ac-card">
+  <div class="ac-card-title">定时设置</div>
+  <div class="ac-sched-row"><span>定时任务</span><span id="schedStatus">--</span></div>
+  <div class="ac-sched-row"><span>当前模板</span><span id="schedTmpl">--</span></div>
   <div class="ac-sched-row" style="border:none"><span>自动调温</span><span id="autoAdjStatus">关闭</span></div>
 </div>
 </div>
 
-<!-- ⏰ 定时弹窗 -->
+<!-- ⏰ 定时模板弹窗 -->
 <div class="ac-overlay" id="modal-schedule">
   <div class="ac-modal">
-    <div class="ac-modal-title">&#x23F0; 定时 & 调温 (<span id="schedDevName">--</span>) <button class="ac-modal-close" onclick="closeModal('schedule')">&times;</button></div>
-    <div class="ac-switch"><span>定时开机</span><input type="checkbox" id="schedEnabled" onchange="toggleSchedOn()"></div>
-    <div class="ac-field"><input type="text" id="schedOnTime" placeholder="HH:MM" style="width:80px" disabled></div>
-    <div class="ac-switch"><span>定时关机</span><input type="checkbox" id="schedOffEnabled" onchange="toggleSchedOff()"></div>
-    <div class="ac-field"><input type="text" id="schedOffTime" placeholder="HH:MM" style="width:80px" disabled></div>
-    <div class="ac-switch"><span>自动调温</span><input type="checkbox" id="autoAdjust" onchange="toggleAutoAdj()"></div>
-    <div id="rulesSection" style="display:none">
-      <div class="ac-field-label">温度规则（室外温度 → 目标温度 + 模式）</div>
-      <div id="rulesList"></div>
-      <button class="ac-add-btn" onclick="addRule()">+ 添加规则</button>
+    <div class="ac-modal-title">&#x23F0; 定时模板 (<span id="schedDevName">--</span>) <button class="ac-modal-close" onclick="closeModal('schedule')">&times;</button></div>
+
+    <!-- 总开关 -->
+    <div class="ac-switch" style="margin-bottom:12px">
+      <span style="font-weight:600">启用定时任务</span>
+      <input type="checkbox" id="schedEnabled" onchange="onSchedToggle()">
     </div>
+
+    <div id="tmplArea">
+    <!-- 模板选择 -->
+    <div class="ac-field">
+      <div class="ac-field-label">模板</div>
+      <div class="ac-tmpl-row">
+        <select id="tmplSelect" onchange="onTmplChange()"></select>
+        <button class="ac-toolbar-btn" onclick="addTemplate()" title="新增模板">+</button>
+        <button class="ac-toolbar-btn" onclick="delTemplate()" title="删除模板" style="color:#e74c3c">&times;</button>
+      </div>
+    </div>
+
+    <!-- 日期组容器 -->
+    <div id="groupsContainer"></div>
+    </div><!-- /tmplArea -->
+
+    <!-- 自动调温 -->
+    <div class="ac-switch"><span>自动调温</span><input type="checkbox" id="autoAdjust" onchange="toggleAutoAdj()"></div>
     <button class="ac-save-btn" onclick="saveSchedule()">&#x1F4BE; 保存设置</button>
+  </div>
+</div>
+
+<!-- 🌡 温度规则弹窗 -->
+<div class="ac-overlay" id="modal-rules">
+  <div class="ac-modal">
+    <div class="ac-modal-title">&#x1F321; 温度规则 (<span id="rulesDevName">--</span>) <button class="ac-modal-close" onclick="closeModal('rules')">&times;</button></div>
+    <div class="ac-field-label">室外温度 → 目标温度 + 模式（定时 & 调温共用）</div>
+    <div id="rulesList"></div>
+    <button class="ac-add-btn" onclick="addRule()">+ 添加规则</button>
+    <button class="ac-save-btn" onclick="saveRules()">&#x1F4BE; 保存规则</button>
   </div>
 </div>
 
@@ -186,6 +229,9 @@
     <div class="ac-field" style="font-size:11px;color:var(--cbi-text-secondary)">
       名称：<span id="devNameInfo">--</span> &nbsp; MAC: <span id="devMacInfo">--</span> &nbsp; IP: <span id="devIpInfo">--</span>
     </div>
+    <div class="ac-field" style="font-size:11px;color:var(--cbi-text-secondary)">
+      <span>改名：</span><input type="text" id="devNameInput" placeholder="输入新名称" style="width:60%;font-size:12px;padding:4px 6px">
+    </div>
     <button class="ac-save-btn" onclick="saveDevice()">&#x1F4BE; 保存设置</button>
   </div>
 </div>
@@ -201,12 +247,40 @@
   </div>
 </div>
 
+<!-- ❓ 帮助弹窗 -->
+<div class="ac-overlay" id="modal-help">
+  <div class="ac-modal">
+    <div class="ac-modal-title">&#x2753; 关于插件 <button class="ac-modal-close" onclick="closeModal('help')">&times;</button></div>
+    <div style="font-size:13px;line-height:1.8;color:var(--cbi-text,#333)">
+      <p><strong>BroadlinkAC</strong> — 基于 OpenWRT 的全自动空调控制插件。</p>
+      <p>&#x2705; 支持 17 大品牌空调<br>
+         &#x2705; 和风 + 百度双天气源<br>
+         &#x2705; 台风自动保护<br>
+         &#x2705; 多日期组定时模板<br>
+         &#x2705; 自动调温规则引擎<br>
+         &#x2705; 红外扫描 + Web 控制面板</p>
+      <p><span class="ac-help-link" onclick="downloadGuide()">&#x1F4D6; 详细使用文档请点击这里</span></p>
+      <p style="color:var(--cbi-text-secondary,#666);font-size:11px;margin-top:12px">by 欧阳小白</p>
+      <p style="font-size:11px;margin-top:4px"><a href="https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT" target="_blank" style="color:var(--cbi-text-secondary,#999)">github.com/oywq00008-cell/BroadlinkAC-OpenWRT</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- 右下角帮助按钮 -->
+<button class="ac-help-btn" onclick="openModal('help')" title="帮助">&#x2753;</button>
+
 <script>
 var API = '/cgi-bin/luci/admin/services/broadlinkac/api';
 var current = {power:'off', mode:'cool', temp:26, fan:'auto', devMac:''};
 var statusData = {};
-var BRANDS = ["gree","midea","haier","hisense","hitachi","daikin","mitsubishi_heavy","mitsubishi","toshiba","panasonic","sharp","fujitsu","aux_ac","changhong","chigo","tcl","xiaomi","samsung","lg","whirlpool"];
-var BRAND_NAMES = {"gree":"格力","midea":"美的","haier":"海尔","hisense":"海信","hitachi":"日立","daikin":"大金","mitsubishi_heavy":"三菱重工","mitsubishi":"三菱电机","toshiba":"东芝","panasonic":"松下","sharp":"夏普","fujitsu":"富士通","aux_ac":"奥克斯","changhong":"长虹","chigo":"志高","tcl":"TCL","xiaomi":"小米","samsung":"三星","lg":"LG","whirlpool":"惠而浦"};
+var BRAND_LIST = [["gree","格力"],["midea","美的"],["midea","华凌"],["midea","小米"],["haier","海尔"],["hisense","海信"],["hitachi","日立"],["daikin","大金"],["mitsubishi","三菱"],["panasonic","松下"],["fujitsu","富士通"],["aux_ac","奥克斯"],["ballu","巴鲁"],["carriermca","开利"],["hyundai","现代"],["fuego","Fuego"]];
+var WEEKDAYS = ["周一","周二","周三","周四","周五","周六","周日"];
+
+// ── 模板编辑状态 ──
+var _templates = {};           // {name: {groups: [{days:[], slots:[{on,off,on_enabled,off_enabled}]}]}}
+var _activeTemplate = '';      // 当前设备绑定的模板名
+var _schedEnabled = true;      // 定时任务总开关
+var _editingGroupIdx = 0;
 
 function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
 
@@ -229,16 +303,13 @@ function loadAll(force) {
   var cmd = force ? 'refresh' : 'status';
   api(cmd).then(function(d){
     statusData = d; updateStatus(d);
-    // 首次打开且没有任何设备 → 自动扫描一次
     if (!force && d && !d.disabled && (!d.devices || d.devices.length === 0)) {
       document.getElementById('refreshInfo').textContent = '首次自动扫描...';
       api('discover').then(function(dd){
         document.getElementById('refreshInfo').textContent = '';
         if (dd && dd.ok && dd.devices && dd.devices.length) {
-          // 扫描成功 → 重新拉一次 status 应用新设备
           api('status').then(function(s){ statusData = s; updateStatus(s); });
         } else {
-          // 扫描失败/无设备 → 顶部短暂提示
           document.getElementById('refreshInfo').textContent = '⚠️ 自动扫描未发现设备，请点击扫描';
           setTimeout(function(){
             var el = document.getElementById('refreshInfo');
@@ -268,7 +339,6 @@ function updateStatus(d) {
   document.getElementById('tempNum').textContent = current.temp;
   document.getElementById('tempSlider').value = current.temp;
 
-  // 设备选择器
   var sel = document.getElementById('devSelect');
   var devs = d.devices || [];
   if (devs.length >= 1) {
@@ -295,8 +365,10 @@ function updateStatus(d) {
 
   var wt = (d.weather && d.weather.temp != null) ? d.weather.temp : '--';
   document.getElementById('outdoorTemp').textContent = wt !== '--' ? wt + '\u00b0' : wt;
+  document.getElementById('weatherText').textContent = (d.weather && d.weather.text) || '--';
   document.getElementById('outdoorHumid').textContent = ((d.weather && d.weather.humidity) ? d.weather.humidity : '--') + '%';
 
+  document.getElementById('locName').textContent = '📍 ' + ((d.location && d.location.name) || '--');
   var sd = d.storm_dist || 99999;
   document.getElementById('stormDist').textContent = sd < 99999 ? sd + 'km' : '--';
   var ab = document.getElementById('alertBox');
@@ -305,14 +377,15 @@ function updateStatus(d) {
   else if (sd < 99999) ab.innerHTML = '<div class="ac-alert-row ac-alert-safe">&#x2705; ' + d.storm_name + ' ' + sd + 'km</div>';
   else ab.innerHTML = '';
 
-  document.getElementById('schedOn').textContent = (d.schedule && d.schedule.on) || '--';
-  document.getElementById('schedOff').textContent = (d.schedule && d.schedule.off) || '--';
-  document.getElementById('autoAdjStatus').textContent = (d.schedule && d.schedule.auto_adjust) ? '开启' : '关闭';
+  // 模板摘要
+  var sc = d.schedule || {};
+  document.getElementById('schedStatus').textContent = sc.enabled ? '已开启' : '已关闭';
+  document.getElementById('schedTmpl').textContent = sc.enabled ? (sc.template_name || '默认') : '--';
+  document.getElementById('autoAdjStatus').textContent = sc.auto_adjust ? '开启' : '关闭';
   document.getElementById('lastAction').textContent = (d.state && d.state.last_action) || '';
 }
 
 // ── 空调控制 ──
-// 下面所有按钮只更新状态，不发码
 function togglePower() {
   current.power = current.power === 'on' ? 'off' : 'on';
   var on = current.power === 'on';
@@ -330,7 +403,6 @@ function setFan(f) {
   var fs = document.querySelectorAll('.ac-fan-btn');
   for (var i=0; i<fs.length; i++) fs[i].classList.toggle('active', fs[i].getAttribute('data-fan') === f);
 }
-// 大圆按钮：发送 power + mode + temp + fan
 function doSend() {
   var pm = {on:'开机', off:'关机'};
   var mm = {cool:'制冷', heat:'制热', dry:'除湿', fan:'送风'};
@@ -347,9 +419,7 @@ function showError(msg) {
   var el = document.getElementById('lastAction');
   el.textContent = msg; el.style.color = '';
   if (showError._t) clearTimeout(showError._t);
-  showError._t = setTimeout(function(){
-    el.textContent = '';
-  }, 3000);
+  showError._t = setTimeout(function(){ el.textContent = ''; }, 3000);
 }
 
 // ── 设备发现 ──
@@ -371,7 +441,6 @@ function discoverDevices() {
     h += '<div style="font-size:11px;padding:4px;color:#2ecc71">&#x2705; 已自动保存 ' + d.devices.length + ' 台</div>';
     list.innerHTML = h;
     loadAll();
-    // 3 秒后整块淡出隐藏
     setTimeout(function(){
       list.classList.add('fade-out');
       setTimeout(function(){ list.style.display = 'none'; }, 260);
@@ -389,8 +458,10 @@ function switchDevice(mac) {
 function openModal(type) {
   document.getElementById('modal-' + type).classList.add('show');
   if (type === 'schedule') fillScheduleForm();
+  if (type === 'rules') fillRulesForm();
   if (type === 'device') fillDeviceForm();
   if (type === 'log') fillLogForm();
+  if (type === 'help') {} // 静态弹窗
 }
 function closeModal(type) {
   document.getElementById('modal-' + type).classList.remove('show');
@@ -409,7 +480,6 @@ function fillLogForm() {
       grid.innerHTML = '<div style="grid-column:span 4;text-align:center;padding:8px;color:#e74c3c;font-size:12px">获取失败: ' + (d?d.error:'-') + '</div>';
       return;
     }
-    // 生成最近 14 天的日期网格，有日志的标红可点
     var dates = d.dates || [];
     var dateSet = {}; for (var i=0;i<dates.length;i++) dateSet[dates[i]] = true;
     var h = '';
@@ -437,17 +507,46 @@ function selectLogDate(el) {
 }
 function downloadLog() {
   if (!_logSelected) return;
-  // 走独立 endpoint（绕开 luci.sys.exec 的 4KB 截断）
   var url = '/cgi-bin/luci/admin/services/broadlinkac/log_download?date=' + encodeURIComponent(_logSelected);
   window.open(url, '_blank');
 }
 
-// ── 定时弹窗 ──
+// ── 温度规则弹窗 ──
+function fillRulesForm() {
+  var d = statusData;
+  var devName = '--';
+  if (d && d.devices && d.devices.length > 0) {
+    var curMac = current.devMac || '';
+    for (var i = 0; i < d.devices.length; i++) {
+      if (d.devices[i].mac === curMac) { devName = d.devices[i].name; break; }
+    }
+    if (devName === '--') devName = d.devices[0].name;
+  }
+  document.getElementById('rulesDevName').textContent = devName;
+  var sc = d.schedule || {};
+  _rules = (sc.rules || []).slice();
+  buildRules(_rules);
+}
+
+function saveRules() {
+  var data = {
+    mac: current.devMac || '',
+    rules: collectRules()
+  };
+  api('save_rules ' + b64(JSON.stringify(data))).then(function(d){
+    if (d.ok) { closeModal('rules'); loadAll(); }
+    else showError(d.error || '保存失败');
+  });
+}
+// ── 文档下载 ──
+function downloadGuide() {
+window.open('/cgi-bin/luci/admin/services/broadlinkac/download_guide', '_blank');
+}
+
+// ── 定时模板弹窗 ──
 function fillScheduleForm() {
   var d = statusData;
-  var sel = document.getElementById('devSelect');
   var devName = '--';
-  // 取当前选中设备名，而非始终取 devices[0]
   if (d && d.devices && d.devices.length > 0) {
     var curMac = current.devMac || '';
     for (var i = 0; i < d.devices.length; i++) {
@@ -456,33 +555,196 @@ function fillScheduleForm() {
     if (devName === '--') devName = d.devices[0].name;
   }
   document.getElementById('schedDevName').textContent = devName;
+
+  // 加载模板数据
   var sc = d.schedule || {};
-  document.getElementById('schedEnabled').checked = !!sc.enabled;
-  document.getElementById('schedOnTime').value = sc.on_time || '10:00';
-  document.getElementById('schedOnTime').disabled = !sc.enabled;
-  document.getElementById('schedOffEnabled').checked = !!sc.off_enabled;
-  document.getElementById('schedOffTime').value = sc.off_time || '22:00';
-  document.getElementById('schedOffTime').disabled = !sc.off_enabled;
+  _schedEnabled = sc.enabled !== false;
+  document.getElementById('schedEnabled').checked = _schedEnabled;
+  _templates = sc.templates || {};
+  _activeTemplate = sc.active_template || '';
+  if (Object.keys(_templates).length === 0) {
+    _templates['默认'] = {groups: [{days: [1,2,3,4,5], slots: [{on: '10:00', off: '22:00', on_enabled: true, off_enabled: true}]}]};
+    _activeTemplate = '默认';
+  }
+  if (!_activeTemplate || !_templates[_activeTemplate]) {
+    _activeTemplate = Object.keys(_templates)[0];
+  }
+
+  // 填充模板下拉
+  refreshTmplSelect();
+
+  // 自动调温
   document.getElementById('autoAdjust').checked = sc.auto_adjust !== false;
-  buildRules(sc.rules || []);
   toggleAutoAdj();
+
+  // 渲染当前模板
+  renderTemplateEditor();
 }
-function toggleSchedOn() {
-  var en = document.getElementById('schedEnabled').checked;
-  document.getElementById('schedOnTime').disabled = !en;
+
+function refreshTmplSelect() {
+  var sel = document.getElementById('tmplSelect');
+  sel.innerHTML = '';
+  var keys = Object.keys(_templates);
+  for (var i = 0; i < keys.length; i++) {
+    var opt = document.createElement('option');
+    opt.value = keys[i];
+    opt.textContent = keys[i];
+    if (keys[i] === _activeTemplate) opt.selected = true;
+    sel.appendChild(opt);
+  }
 }
-function toggleSchedOff() {
-  var en = document.getElementById('schedOffEnabled').checked;
-  document.getElementById('schedOffTime').disabled = !en;
+
+function onTmplChange() {
+  _activeTemplate = document.getElementById('tmplSelect').value;
+  _editingGroupIdx = 0;
+  renderTemplateEditor();
 }
+
+function onSchedToggle() {
+  _schedEnabled = document.getElementById('schedEnabled').checked;
+  var container = document.getElementById('groupsContainer');
+  var tmplArea = document.getElementById('tmplArea');
+  if (tmplArea) tmplArea.style.display = _schedEnabled ? 'block' : 'none';
+  if (!_schedEnabled) {
+    document.getElementById('groupsContainer').innerHTML = '<div style="font-size:12px;color:var(--cbi-text-secondary);padding:8px;text-align:center">定时任务已关闭，模板设置暂不可用</div>';
+  } else {
+    renderTemplateEditor();
+  }
+}
+
+function addTemplate() {
+  var name = prompt('请输入模板名称:');
+  if (!name || !name.trim()) return;
+  name = name.trim();
+  if (_templates[name]) { alert('模板已存在'); return; }
+  _templates[name] = {groups: [{days: [1,2,3,4,5], slots: [{on: '10:00', off: '22:00', on_enabled: true, off_enabled: true}]}]};
+  _activeTemplate = name;
+  refreshTmplSelect();
+  _editingGroupIdx = 0;
+  renderTemplateEditor();
+}
+
+function delTemplate() {
+  var keys = Object.keys(_templates);
+  if (keys.length <= 1) { alert('至少保留一个模板'); return; }
+  if (!confirm('确定删除模板 "' + _activeTemplate + '"？')) return;
+  delete _templates[_activeTemplate];
+  _activeTemplate = Object.keys(_templates)[0];
+  _editingGroupIdx = 0;
+  refreshTmplSelect();
+  renderTemplateEditor();
+}
+
+function renderTemplateEditor() {
+  var tmpl = _templates[_activeTemplate];
+  if (!tmpl) return;
+  if (!tmpl.groups) tmpl.groups = [{days: [1,2,3,4,5], slots: []}];
+  if (_editingGroupIdx >= tmpl.groups.length) _editingGroupIdx = 0;
+
+  var grp = tmpl.groups[_editingGroupIdx] || {days: [1,2,3,4,5], slots: []};
+  var h = '';
+
+  // 日期组切换
+  if (tmpl.groups.length > 1) {
+    h += '<div class="ac-tmpl-row" style="margin-bottom:8px">';
+    h += '<span style="font-size:11px;color:var(--cbi-text-secondary)">日期组:</span>';
+    for (var g = 0; g < tmpl.groups.length; g++) {
+      h += '<button class="ac-toolbar-btn" onclick="_editingGroupIdx=' + g + ';renderTemplateEditor()" style="' + (g === _editingGroupIdx ? 'background:#e94560;color:#fff;border-color:#e94560' : '') + '">组' + (g+1) + '</button>';
+    }
+    h += '<button class="ac-toolbar-btn" onclick="addGroup()" style="font-size:16px;padding:2px 8px">+</button>';
+    if (tmpl.groups.length > 1) h += '<button class="ac-toolbar-btn" onclick="delGroup()" style="color:#e74c3c;font-size:14px;padding:2px 8px">&times;</button>';
+    h += '</div>';
+  } else {
+    h += '<div style="margin-bottom:6px"><button class="ac-add-btn" onclick="addGroup()">+ 添加日期组</button></div>';
+  }
+
+  // 日期勾选
+  h += '<div class="ac-field-label">日期</div>';
+  h += '<div class="ac-day-row">';
+  for (var d = 0; d < 7; d++) {
+    var active = grp.days.indexOf(d+1) >= 0;
+    h += '<button class="ac-day-btn' + (active ? ' on' : '') + '" onclick="toggleDay(' + (d+1) + ')">' + WEEKDAYS[d].charAt(1) + '</button>';
+  }
+  h += '</div>';
+
+  // 时间段
+  h += '<div class="ac-field-label">时间段</div>';
+  var slots = grp.slots || [];
+  for (var s = 0; s < slots.length; s++) {
+    var slot = slots[s];
+    h += '<div class="ac-slot-row">';
+    h += '<span class="ac-slot-label">' + (s+1) + '</span>';
+    h += '<input type="checkbox" ' + (slot.on_enabled !== false ? 'checked' : '') + ' onchange="updateSlot(' + s + ',this)" data-field="on_enabled" style="width:16px;height:16px;accent-color:#e94560">';
+    h += '<input type="text" value="' + (slot.on || '10:00') + '" onchange="updateSlot(' + s + ',this)" data-field="on" placeholder="开机">';
+    h += '<span style="font-size:11px;color:var(--cbi-text-secondary)">→</span>';
+    h += '<input type="text" value="' + (slot.off || '22:00') + '" onchange="updateSlot(' + s + ',this)" data-field="off" placeholder="关机">';
+    h += '<input type="checkbox" ' + (slot.off_enabled !== false ? 'checked' : '') + ' onchange="updateSlot(' + s + ',this)" data-field="off_enabled" style="width:16px;height:16px;accent-color:#e94560">';
+    h += '<button class="ac-slot-del" onclick="delSlot(' + s + ')">&times;</button>';
+    h += '</div>';
+  }
+  h += '<button class="ac-add-btn" onclick="addSlot()" style="margin-top:4px">+ 添加时间段</button>';
+
+  document.getElementById('groupsContainer').innerHTML = h;
+}
+
+function toggleDay(day) {
+  var grp = _templates[_activeTemplate].groups[_editingGroupIdx];
+  var idx = grp.days.indexOf(day);
+  if (idx >= 0) grp.days.splice(idx, 1);
+  else grp.days.push(day);
+  grp.days.sort(function(a,b){return a-b;});
+  renderTemplateEditor();
+}
+
+function updateSlot(idx, el) {
+  var field = el.getAttribute('data-field');
+  var grp = _templates[_activeTemplate].groups[_editingGroupIdx];
+  if (!grp.slots[idx]) return;
+  if (field === 'on_enabled' || field === 'off_enabled') {
+    grp.slots[idx][field] = el.checked;
+  } else {
+    grp.slots[idx][field] = el.value;
+  }
+}
+
+function addSlot() {
+  var grp = _templates[_activeTemplate].groups[_editingGroupIdx];
+  grp.slots.push({on: '10:00', off: '22:00', on_enabled: true, off_enabled: true});
+  renderTemplateEditor();
+}
+
+function delSlot(idx) {
+  var grp = _templates[_activeTemplate].groups[_editingGroupIdx];
+  grp.slots.splice(idx, 1);
+  if (grp.slots.length === 0) grp.slots.push({on: '10:00', off: '22:00', on_enabled: true, off_enabled: true});
+  renderTemplateEditor();
+}
+
+function addGroup() {
+  _templates[_activeTemplate].groups.push({days: [1,2,3,4,5], slots: [{on: '10:00', off: '22:00', on_enabled: true, off_enabled: true}]});
+  _editingGroupIdx = _templates[_activeTemplate].groups.length - 1;
+  renderTemplateEditor();
+}
+
+function delGroup() {
+  var tmpl = _templates[_activeTemplate];
+  if (tmpl.groups.length <= 1) return;
+  tmpl.groups.splice(_editingGroupIdx, 1);
+  if (_editingGroupIdx >= tmpl.groups.length) _editingGroupIdx = tmpl.groups.length - 1;
+  renderTemplateEditor();
+}
+
+// ── 自动调温规则 ──
+var _rules = [];
+
 function toggleAutoAdj() {
-  var en = document.getElementById('autoAdjust').checked;
-  document.getElementById('rulesSection').style.display = en ? 'block' : 'none';
+  // 自动调温开关 — 规则区域始终可见，不需要联动隐藏
 }
 function buildRules(rules) {
+  _rules = rules || [];
   var h = '';
-  for (var i=0; i<rules.length; i++) {
-    var r = rules[i];
+  for (var i=0; i<_rules.length; i++) {
+    var r = _rules[i];
     h += '<div class="ac-rule-row">';
     h += '<input type="number" value="' + r[0] + '" data-idx="' + i + '" data-field="0"> ~ ';
     h += '<input type="number" value="' + r[1] + '" data-idx="' + i + '" data-field="1"> &deg;C &rarr; ';
@@ -494,18 +756,16 @@ function buildRules(rules) {
     h += '</select>';
     h += '<button class="ac-rule-del" onclick="delRule(' + i + ')">&times;</button></div>';
   }
-  if (!rules.length) h = '<div style="font-size:12px;color:var(--cbi-text-secondary);padding:4px">暂无规则，点击下方添加</div>';
+  if (!_rules.length) h = '<div style="font-size:12px;color:var(--cbi-text-secondary);padding:4px">暂无规则，点击下方添加</div>';
   document.getElementById('rulesList').innerHTML = h;
 }
 function addRule() {
-  var rules = statusData.schedule ? (statusData.schedule.rules || []) : [];
-  rules.push([19, 35, 26, 'cool']);
-  buildRules(rules);
+  _rules.push([19, 35, 26, 'cool']);
+  buildRules(_rules);
 }
 function delRule(idx) {
-  var rules = statusData.schedule ? (statusData.schedule.rules || []) : [];
-  rules.splice(idx, 1);
-  buildRules(rules);
+  _rules.splice(idx, 1);
+  buildRules(_rules);
 }
 function collectRules() {
   var rules = [];
@@ -519,15 +779,14 @@ function collectRules() {
   }
   return rules;
 }
+
 function saveSchedule() {
   var data = {
     mac: current.devMac || '',
-    enabled: document.getElementById('schedEnabled').checked,
-    on_time: document.getElementById('schedOnTime').value,
-    off_enabled: document.getElementById('schedOffEnabled').checked,
-    off_time: document.getElementById('schedOffTime').value,
-    auto_adjust: document.getElementById('autoAdjust').checked,
-    rules: collectRules()
+    schedule_enabled: _schedEnabled,
+    templates: _templates,
+    active_template: _activeTemplate,
+    auto_adjust: document.getElementById('autoAdjust').checked
   };
   api('save_schedule ' + b64(JSON.stringify(data))).then(function(d){
     if (d.ok) { closeModal('schedule'); loadAll(); }
@@ -551,16 +810,17 @@ function fillDeviceForm() {
   document.getElementById('locCurrent').textContent = loc.name ? loc.name + '  ' + loc.lat.toFixed(4) + '°N, ' + loc.lon.toFixed(4) + '°E' : '未设置';
   var info = d.device_info || {};
   document.getElementById('devNameInfo').textContent = d.device_name || '--';
+  document.getElementById('devNameInput').value = d.device_name || '';
   document.getElementById('devMacInfo').textContent = info.mac || '--';
   document.getElementById('devIpInfo').textContent = info.host || '--';
   var sel = document.getElementById('devBrand');
   sel.innerHTML = '';
-  for (var i=0; i<BRANDS.length; i++) {
-    var b = BRANDS[i];
+  for (var i=0; i<BRAND_LIST.length; i++) {
+    var b = BRAND_LIST[i];
     var opt = document.createElement('option');
-    opt.value = b;
-    opt.textContent = (BRAND_NAMES[b] || b);
-    if (b === (info.brand || 'gree')) opt.selected = true;
+    opt.value = b[0];
+    opt.textContent = b[1];
+    if (b[0] === (info.brand || 'gree')) opt.selected = true;
     sel.appendChild(opt);
   }
   document.getElementById('searchResults').style.display = 'none';
@@ -577,7 +837,6 @@ function searchLocation() {
     var h = '';
     for (var i=0; i<data.length; i++) {
       var it = data[i];
-      // 用 data-attr + dataset 取值，避免单引号/双引号注入 onclick 字符串
       var safeName = (it.name || q);
       h += '<div class="ac-search-item" data-lat="' + it.lat + '" data-lon="' + it.lon + '" data-name="' + encodeURIComponent(safeName) + '" onclick="selectLocationFromEl(this)">' + it.display_name + '</div>';
     }
@@ -594,7 +853,6 @@ function selectLocation(lat, lon, name) {
   document.getElementById('locSearch').value = '';
   document.getElementById('searchResults').style.display = 'none';
   document.getElementById('locCurrent').textContent = name + '  ' + lat.toFixed(4) + '°N, ' + lon.toFixed(4) + '°E';
-  // Save immediately
   api('location_save ' + b64(JSON.stringify({lat: lat, lon: lon, name: name}))).then(function(d){
     if (d.ok) loadAll();
     else showError(d.error || '保存失败');
@@ -602,10 +860,12 @@ function selectLocation(lat, lon, name) {
 }
 function saveDevice() {
   var info = statusData.device_info || {};
+  var newName = document.getElementById('devNameInput').value.trim();
   var data = {
     mac: info.mac || current.devMac || '',
     brand: document.getElementById('devBrand').value
   };
+  if (newName) data.name = newName;
   api('save_device ' + b64(JSON.stringify(data))).then(function(d){
     if (d.ok) { closeModal('device'); loadAll(); }
     else showError(d.error || '保存失败');

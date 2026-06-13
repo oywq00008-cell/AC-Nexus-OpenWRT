@@ -84,14 +84,14 @@ for name, st in entries:
         b'0     ' + b'0     ' +
         b'100644  ' +
         str(st.st_size).ljust(10)[:10].encode() +
-        b'\x60\n'
+        b'`\n'
     )
     assert len(hdr) == 60, f'header len={len(hdr)}'
     result += hdr
     with open(name, 'rb') as f:
         result += ar_pad(f.read())
 
-out = '../broadlinkac_3.1-1_aarch64_generic.ipk'
+out = '../broadlinkac_3.2-1_aarch64_cortex-a53.ipk'
 with open(out, 'wb') as f:
     f.write(result)
 print(f'Done: {out} ({len(result)} bytes)')

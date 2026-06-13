@@ -145,7 +145,7 @@ def _load_device_to_flat(mac):
 
 
 def add_or_update_device(mac, info):
-    """添加或更新设备信息，不覆盖已有配置"""
+    """添加或更新设备信息，不覆盖已有配置。新设备同名自动加序号。"""
     if "devices" not in config:
         config["devices"] = {}
     existing = config["devices"].get(mac, {})
@@ -153,8 +153,17 @@ def add_or_update_device(mac, info):
     if mac in config["devices"]:
         old_name = config["devices"][mac].get("name", "")
         if old_name:
-            info = dict(info)  # 不污染调用方
+            info = dict(info)
             info.pop("name", None)
+    else:
+        # 新设备：检查同名，加序号
+        raw_name = info.get("name", mac[:8])
+        existing_names = {d.get("name", "") for d in config["devices"].values()}
+        if raw_name in existing_names:
+            i = 2
+            while f"{raw_name} ({i})" in existing_names:
+                i += 1
+            info["name"] = f"{raw_name} ({i})"
     existing.update(info)
     config["devices"][mac] = existing
     if not config.get("current_device_mac"):

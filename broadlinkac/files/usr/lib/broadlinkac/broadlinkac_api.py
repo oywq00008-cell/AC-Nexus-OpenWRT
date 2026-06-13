@@ -203,6 +203,14 @@ if cmd == "status" or cmd == "refresh":
         result["schedule"]["auto_adjust"] = bool(current_dev.get("auto_adjust", True))
         result["schedule"]["rules"] = current_dev.get("temp_rules") or []
 
+        active_tmpl = current_dev.get("active_template", "")
+        result["schedule"]["active_template"] = active_tmpl
+
+    # 模板数据（独立于设备，全局共享）
+    templates = cfg.get("schedule_templates") or {}
+    result["schedule"]["templates"] = templates
+    result["schedule"]["template_name"] = result["schedule"].get("active_template") or ("默认" if templates else "--")
+
     # 设备详情（品牌等）
     if current_dev:
         result["device_info"] = {
@@ -238,9 +246,10 @@ if cmd == "status" or cmd == "refresh":
                 if temp_val is not None:
                     _cfg_mod._cached_temp = temp_val
                 result["weather"] = {"temp": str(w.get("temp", "--")),
-                                     "humidity": str(w.get("humidity", w.get("rh", "--")))}
+                                     "humidity": str(w.get("humidity", w.get("rh", "--"))),
+                                     "text": w.get("text", "--")}
             else:
-                result["weather"] = {"temp": "--", "humidity": "--"}
+                result["weather"] = {"temp": "--", "humidity": "--", "text": "--"}
         else:
             temp_val = _cfg_mod._cached_temp
             if temp_val is None:
@@ -251,11 +260,12 @@ if cmd == "status" or cmd == "refresh":
                     if temp_val is not None:
                         _cfg_mod._cached_temp = temp_val
                     result["weather"] = {"temp": str(w.get("temp", "--")),
-                                         "humidity": str(w.get("humidity", w.get("rh", "--")))}
+                                         "humidity": str(w.get("humidity", w.get("rh", "--"))),
+                                         "text": w.get("text", "--")}
                 else:
-                    result["weather"] = {"temp": "--", "humidity": "--"}
+                    result["weather"] = {"temp": "--", "humidity": "--", "text": "--"}
             else:
-                result["weather"] = {"temp": str(temp_val), "humidity": "--"}
+                result["weather"] = {"temp": str(temp_val), "humidity": "--", "text": "--"}
     except Exception as e:
         result["weather"] = {"temp": "--", "humidity": "--", "error": str(e)}
 
@@ -310,7 +320,7 @@ elif cmd.startswith("send "):
         result = {"ok": False, "error": "参数不足"}
 
 elif cmd.startswith("save_schedule "):
-    # base64 JSON: {"mac":"...","enabled":true,"on_time":"...","off_enabled":false,...}
+    # base64 JSON: {"mac":"...","templates":{...},"active_template":"...","auto_adjust":bool,"rules":[...]}
     import base64, subprocess as _sp
     try:
         data = json.loads(base64.b64decode(cmd[14:]).decode())
@@ -319,22 +329,36 @@ elif cmd.startswith("save_schedule "):
         cfg = load_config()
         cfg.setdefault("devices", {}).setdefault(mac, {})
         dev = cfg["devices"][mac]
-        if "enabled" in data:
-            dev["schedule_enabled"] = bool(data["enabled"])
-        if "on_time" in data:
-            dev["trigger_time"] = data["on_time"]
-        if "off_enabled" in data:
-            dev["off_enabled"] = bool(data["off_enabled"])
-        if "off_time" in data:
-            dev["off_time"] = data["off_time"]
+        if "templates" in data:
+            cfg["schedule_templates"] = data["templates"]
+        if "active_template" in data:
+            dev["active_template"] = data["active_template"]
+        if "schedule_enabled" in data:
+            dev["schedule_enabled"] = bool(data["schedule_enabled"])
         if "auto_adjust" in data:
             dev["auto_adjust"] = bool(data["auto_adjust"])
-        if "rules" in data:
-            dev["temp_rules"] = data["rules"]
         save_config(cfg, sync_device=False)
-        # Sync to UCI
         _uci_set_device(mac, dev)
-        # 定时/调温变更后重注册 schedule（防止 trigger_time 改了不生效）
+        try:
+            from broadlinkac_core.scheduler import re_register
+            re_register()
+        except Exception:
+            pass
+        result = {"ok": True}
+    except Exception as e:
+        result = {"ok": False, "error": str(e)}
+
+elif cmd.startswith("save_rules "):
+    import base64
+    try:
+        data = json.loads(base64.b64decode(cmd[11:]).decode())
+        mac = data.get("mac") or cfg_get_mac()
+        from broadlinkac_core.config import load_config, save_config
+        cfg = load_config()
+        cfg.setdefault("devices", {}).setdefault(mac, {})
+        cfg["devices"][mac]["temp_rules"] = data.get("rules", [])
+        save_config(cfg, sync_device=False)
+        _uci_set_device(mac, cfg["devices"][mac])
         try:
             from broadlinkac_core.scheduler import re_register
             re_register()
@@ -356,19 +380,32 @@ elif cmd.startswith("save_device "):
             cfg = load_config()
             cfg.setdefault("devices", {}).setdefault(mac, {})
             dev = cfg["devices"][mac]
+            name_error = None
             if "name" in data:
-                dev["name"] = data["name"]
-            if "brand" in data:
-                dev["brand"] = data["brand"]
-            save_config(cfg, sync_device=False)
-            _uci_set_device(mac, dev)
+                new_name = data["name"].strip()
+                if not new_name:
+                    name_error = "名称不能为空"
+                else:
+                    for omac, odev in cfg.get("devices", {}).items():
+                        if omac != mac and odev.get("name") == new_name:
+                            name_error = f"名称「{new_name}」已被其他设备使用"
+                            break
+                    if not name_error:
+                        dev["name"] = new_name
+            if name_error:
+                result = {"ok": False, "error": name_error}
+            else:
+                if "brand" in data:
+                    dev["brand"] = data["brand"]
+                save_config(cfg, sync_device=False)
+                _uci_set_device(mac, dev)
+                result = {"ok": True}
             # 设备字段变化后重注册 schedule（防止新增设备没 job）
             try:
                 from broadlinkac_core.scheduler import re_register
                 re_register()
             except Exception:
                 pass
-            result = {"ok": True}
     except Exception as e:
         result = {"ok": False, "error": str(e)}
 
@@ -491,6 +528,18 @@ elif cmd == "discover":
 
     except ImportError:
         result = {"ok": False, "error": "broadlink 库未安装"}
+    except Exception as e:
+        result = {"ok": False, "error": str(e)}
+
+elif cmd == "help_doc":
+    # 返回使用指南文档内容
+    try:
+        doc_path = "/usr/share/broadlinkac/docs/guide.md"
+        if os.path.exists(doc_path):
+            with open(doc_path, "r", encoding="utf-8") as f:
+                result = {"ok": True, "content": f.read()}
+        else:
+            result = {"ok": False, "error": "文档未找到"}
     except Exception as e:
         result = {"ok": False, "error": str(e)}
 
