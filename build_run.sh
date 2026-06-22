@@ -1,22 +1,21 @@
 #!/bin/sh
-# 构建 BroadlinkAC .run 自解压安装包
-# 输出: broadlinkac_3.2-1.run
+# 构建 AC-Nexus-OpenWRT .run 自解压安装包
+# 现在主用 Python 构建以避免 Windows tar 兼容问题
+# 保留此脚本作为备选（需 Git Bash）
 
 set -e
 cd "$(dirname "$0")"
 
-# 1. 打包项目文件
 echo "打包插件文件..."
-tar czf data.tar.gz -C broadlinkac/files .
+tar czf data.tar.gz -C acnexus/files .
 
-# 2. 拼接：安装脚本 + 数据
 echo "生成 .run..."
-cp installer_template.sh ../broadlinkac_3.2-1.run
-cat data.tar.gz >> ../broadlinkac_3.2-1.run
-chmod +x ../broadlinkac_3.2-1.run
+cp installer_template.sh acnexus_3.2-1.run
+cat data.tar.gz >> acnexus_3.2-1.run
+chmod +x acnexus_3.2-1.run
 
-# 3. 清理
 rm -f data.tar.gz
 
-SIZE=$(du -h ../broadlinkac_3.2-1.run | cut -f1)
-echo "Done: broadlinkac_3.2-1.run (${SIZE})"
+SIZE=$(wc -c acnexus_3.2-1.run | awk '{print $1}')
+echo "Done: acnexus_3.2-1.run (${SIZE} bytes)"
+echo "提示: Windows 上建议用 python build_run.py 代替此脚本构建"

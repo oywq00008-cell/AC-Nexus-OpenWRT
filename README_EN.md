@@ -1,24 +1,24 @@
 [中文](README.md) / [English](README_EN.md)
 
-# BroadlinkAC-OpenWRT
+# AC-Nexus-OpenWRT
 
 > OpenWRT router plugin for fully automatic air conditioning control via Broadlink RM. Weather-aware, storm-protected, 24/7 unattended operation.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenWRT](https://img.shields.io/badge/OpenWRT-21%2B-blue.svg)]()
 [![Python](https://img.shields.io/badge/Python-3.8%2B-green.svg)]()
-[![Release](https://img.shields.io/badge/Release-v3.2-blue)](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/releases)
 
 ## ✨ Features
 
-- 🎛️ **LuCI Control Panel** — Web UI for AC control, device config, log viewing
+- 🎛️ **LuCI Control Panel** — Web UI for AC remote control, schedule templates, temp rules, multi-device management
 - 🌤️ **Dual Weather Source** — Baidu + QWeather, auto-fallback + stale-cache rescue
-- 🌀 **Storm Auto-Protection** — Force-shutdown all ACs when storm < 100km
-- ⏰ **Multi-Group Schedule Templates** — Separate weekday/weekend schedules with time slots
-- 🌡️ **Standalone Temp Rules** — Shared by scheduling and auto-adjust, weather-based decisions
-- 🏷️ **Multi-Device Management** — Auto-dedup same-model devices, custom nicknames
-- 🛡️ **Built-in hvac_ir** — 13 IR protocols bundled, zero pip dependencies
-- 📥 **Log Download** — 14-day date grid + Markdown file download
+- 🌀 **Storm Auto-Protection** — 3-tier wind-speed/distance threshold: super typhoon 100km / typhoon 70km / default 50km, auto-shutdown + schedule pause
+- ⏰ **Multi-Group Schedule Templates** — Separate weekday/weekend schedules with multiple time slots
+- 🌡️ **Temperature Rules** — Auto-select target temp/mode based on outdoor temperature
+- 🏷️ **Multi-Device Management** — Broadlink RM, auto-dedup, custom nicknames
+- 🔌 **Xiaomi IR Remote Support** — MIoT LAN protocol, built-in 1300+ model spec index (OAuth login pending)
+- 🛡️ **Built-in Core Libs** — hvac_ir, broadlink, schedule, pyaes all bundled, zero pip dependencies
+- 📥 **Log Download** — Per-day Markdown archives, one-click download from browser
 
 ## 📸 Screenshots
 
@@ -32,33 +32,50 @@
 
 ## 🚀 Quick Start
 
-### Option A: IPK (Recommended)
+> **Prerequisite: Router has internet, ≥ 15MB free storage.**
 
-Download `broadlinkac_3.2-1_all.ipk` from [Releases](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/releases).
+### Option A: IPK via LuCI (Recommended ⭐)
 
-Open your router's LuCI web interface → System → Software → Upload Package, select the IPK file. Done.
+Easiest for beginners. Download `acnexus_*.ipk` from [Releases](https://github.com/oywq00008-cell/AC-Nexus-OpenWRT/releases):
 
-### Option B: .run Installer
+1. Open router LuCI web interface
+2. **System → Software → Upload Package**
+3. Select the downloaded `.ipk` file
+4. Wait for install, refresh the page — done.
 
-Download `BroadlinkAC-3.2.zip` from [Releases](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/releases), extract it:
+> The IPK installer auto-handles: dependency install, CRLF fix, permissions, config.json generation, LuCI cache refresh, and service start. **Zero manual steps required.**
+
+### Option B: .run Script (Fallback)
+
+Use this if Option A fails due to proxy/DNS issues. Download the `.run` file from [Releases](https://github.com/oywq00008-cell/AC-Nexus-OpenWRT/releases):
 
 ```bash
 # Upload to router
-scp broadlinkac_3.2.run root@your-router-ip:/tmp/
+scp acnexus_*.run root@your-router-ip:/tmp/
 
-# Install
-ssh root@your-router-ip "bash /tmp/broadlinkac_3.2.run"
+# SSH in and install
+ssh root@your-router-ip
+bash /tmp/acnexus_*.run
 ```
 
-> See `使用说明.txt` inside the ZIP for detailed steps (macOS / Windows / Linux).
+### Upgrading from Old BroadlinkAC
+
+Before installing the new version, run the cleanup script on your router:
+
+```bash
+scp cleanup_old_broadlinkac.sh root@your-router-ip:/tmp/
+ssh root@your-router-ip "bash /tmp/cleanup_old_broadlinkac.sh"
+```
+
+Then install the new version via Option A or B above.
 
 ### First-Time Setup
 
-Open `http://your-router-ip/cgi-bin/luci/admin/services/broadlinkac`
+Open `http://your-router-ip/cgi-bin/luci/admin/services/acnexus`
 
-1. Fill in QWeather API Key in Settings ([free sign-up](https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT/blob/main/docs/使用指南.md))
+1. Fill in QWeather API Key in Settings page
 2. Search and select your city location
-3. Click **Scan Devices** to discover Broadlink RM
+3. Click **Scan** to discover Broadlink RM devices
 4. Select your AC brand in device settings
 
 ## 🎛️ Supported Brands
@@ -67,11 +84,33 @@ Gree, Midea, Hualing, Xiaomi, Haier, Hisense, Hitachi, Daikin, Mitsubishi, Panas
 
 ## 🔗 Sister Project
 
-**[BroadlinkAC-For-Agent](https://github.com/oywq00008-cell/BroadlinkAC-For-Agent)** — Cross-platform desktop GUI + AI Agent interface (Windows / macOS / Linux).
+**[AC-Nexus](https://github.com/oywq00008-cell/AC-Nexus)** — Cross-platform desktop GUI + AI Agent interface (Windows / macOS / Linux).
 
 Both projects share core algorithms, evolving independently:
 - Desktop: interactive UI + rich user controls
 - Router: 24/7 unattended + automatic response
+
+## ⚙️ Dependencies
+
+The following system packages are auto-installed by opkg (no manual steps needed):
+
+| Package | Purpose |
+|---------|---------|
+| `python3-light` | Python 3 runtime |
+| `python3-urllib` | HTTP requests (weather/storm APIs) |
+| `python3-email` | email module (urllib dependency) |
+| `python3-openssl` | SSL/TLS for HTTPS |
+| `python3-xml` | XML parsing (storm data) |
+
+The following libraries are bundled inside the plugin — no extra installs required:
+
+| Library | Purpose |
+|---------|---------|
+| `broadlink` | LAN discovery & communication with Broadlink devices |
+| `hvac_ir` | Infrared code generation (13 brands) |
+| `schedule` | Task scheduling engine |
+| `pyaes` | Pure Python AES encryption |
+| `_RC4` | Pure Python ARC4 (Xiaomi MIoT protocol) |
 
 ## 📝 License
 

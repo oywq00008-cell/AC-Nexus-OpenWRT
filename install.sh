@@ -1,34 +1,45 @@
 #!/bin/sh
-# BroadlinkAC one-click installer for OpenWRT routers
-# Usage: bash install.sh  (or copy IPK + this script to router, then bash install.sh)
+# ============================================================
+# AC-Nexus-OpenWRT OpenWRT 安装指南
 #
-# 自动处理: opkg 依赖 + IPK 主体（hvac_ir 已内置）
+# 方法一 (推荐): LuCI 网页上传 .ipk
+#   → 路由器网页: 系统 → 软件包 → 上传软件包
+#   → 选择 acnexus_*.ipk 即可，依赖自动安装
+#
+# 方法二 (兜底): .run 脚本一键安装
+#   → 适用于代理/DNS 导致 ipk 安装失败的情况
+#   → bash acnexus_*.run
+#
+# 前提: 路由器已联网
+# ============================================================
 
-set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-IPK="$(ls "$SCRIPT_DIR"/broadlinkac_*.ipk 2>/dev/null | head -1)"
+IPK="$(ls "$SCRIPT_DIR"/acnexus_*.ipk 2>/dev/null | head -1)"
+RUNFILE="$(ls "$SCRIPT_DIR"/acnexus_*.run 2>/dev/null | head -1)"
 
-if [ -z "$IPK" ]; then
-    echo "ERROR: 找不到 *.ipk 文件，请把 install.sh 跟 .ipk 放同一目录"
-    exit 1
+echo "========================================="
+echo "   AC-Nexus-OpenWRT OpenWRT 安装器"
+echo "========================================="
+echo ""
+
+if [ -n "$IPK" ]; then
+    echo ">>> 方法一 (推荐): LuCI 网页上传 ipk"
+    echo ""
+    echo "  1. 浏览器打开路由器后台"
+    echo "  2. 系统 → 软件包 → 上传软件包"
+    echo "  3. 选择: $(basename "$IPK")"
+    echo "  4. 等待安装完成，刷新页面即可"
+    echo ""
 fi
 
-echo "=== BroadlinkAC OpenWRT 一键安装器 ==="
-echo "IPK: $(basename "$IPK")"
-echo ""
+if [ -n "$RUNFILE" ]; then
+    echo ">>> 方法二 (兜底): .run 脚本安装"
+    echo ""
+    echo "  如果方法一失败，请用此方法:"
+    echo "  scp $(basename "$RUNFILE") root@路由器IP:/tmp/"
+    echo "  ssh root@路由器IP"
+    echo "  bash /tmp/$(basename "$RUNFILE")"
+    echo ""
+fi
 
-# 1. opkg 依赖
-echo "[1/2] 装 opkg 依赖..."
-opkg update
-opkg install python3-light python3-urllib python3-json \
-           python3-broadlink python3-schedule 2>/dev/null || true
-
-# 2. IPK 主体（含内置 hvac_ir，无需 pip）
-echo "[2/2] 装插件 IPK..."
-opkg install "$IPK" --force-depends || opkg install "$IPK"
-
-echo ""
-echo "=== 安装完成 ==="
-LAN_IP=$(uci get network.lan.ipaddr 2>/dev/null || echo "192.168.1.1")
-echo "浏览器打开: http://$LAN_IP/cgi-bin/luci/admin/services/broadlinkac"
-echo ""
+echo "========================================="

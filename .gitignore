@@ -1,6 +1,7 @@
 *.ipk
 *.tar.gz
 *.zip
+*.7z
 __pycache__/
 *.pyc
 *.pyo
@@ -8,8 +9,13 @@ __pycache__/
 Thumbs.db
 *.swp
 *.bak
-broadlinkac-openwrt.tar.gz
-broadlinkac_*.ipk
+acnexus_*.ipk
+acnexus_*.run
+acnexus_*.zip
 .idea/
 .vscode/
 router_sync.py
+ipk-build/data/
+ipk-build/debian-binary
+ipk-build/control.tar.gz
+ipk-build/data.tar.gz

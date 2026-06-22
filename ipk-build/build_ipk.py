@@ -1,15 +1,17 @@
-import tarfile, os, io, shutil
+#!/usr/bin/env python3
+"""Build IPK in gzip-tar format (OpenWRT 24.10 compatible)"""
+import tarfile, io, os, shutil
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-# Step 0: 同步 data/ <- ../broadlinkac/files/（避免 stale data 打包旧代码）
-src = '../broadlinkac/files'
+# Step 0: Sync data
+src = '../acnexus/files'
 dst = 'data'
 if os.path.exists(dst):
     shutil.rmtree(dst)
 shutil.copytree(src, dst)
 
-# 清理 __pycache__ 和 .pyc（不打包进 IPK）
+# Clean pycache/CRLF
 for root, dirs, files in os.walk(dst):
     for d in list(dirs):
         if d == '__pycache__':
@@ -18,80 +20,81 @@ for root, dirs, files in os.walk(dst):
     for f in files:
         if f.endswith('.pyc'):
             os.remove(os.path.join(root, f))
+for root, dirs, files in os.walk(dst):
+    for f in files:
+        if any(f.endswith(ext) for ext in ('.py', '.sh', '.lua', '.htm', '.html', '.cgi', '.txt')):
+            path = os.path.join(root, f)
+            with open(path, 'rb') as fh:
+                content = fh.read()
+            fixed = content.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+            if fixed != content:
+                with open(path, 'wb') as fh: fh.write(fixed)
+                print(f'  Fixed CRLF: {os.path.relpath(path, dst)}')
 print(f'Synced: {src} -> {dst}')
 
-# Clean
+# Fix CRLF in CONTROL files
+for ctrl in ['CONTROL/control', 'CONTROL/postinst']:
+    if os.path.exists(ctrl):
+        with open(ctrl, 'rb') as fh:
+            raw = fh.read()
+        fixed = raw.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+        if fixed != raw:
+            with open(ctrl, 'wb') as fh: fh.write(fixed)
+            print(f'  Fixed CRLF: {ctrl}')
+
+# Clean old
 for f in ['control.tar.gz', 'data.tar.gz', 'debian-binary']:
-    if os.path.exists(f):
-        os.remove(f)
+    if os.path.exists(f): os.remove(f)
 
 # debian-binary
 with open('debian-binary', 'w') as f:
     f.write('2.0\n')
 
-# control.tar.gz — USTAR for OpenWRT busybox compatibility
+# control.tar.gz (entries WITHOUT ./ prefix!)
 with tarfile.open('control.tar.gz', 'w:gz', format=tarfile.USTAR_FORMAT) as tf:
-    ti = tarfile.TarInfo('./control')
-    ti.size = os.path.getsize('CONTROL/control')
-    ti.mode = 0o644
-    ti.uid = ti.gid = 0
-    with open('CONTROL/control', 'rb') as f:
-        tf.addfile(ti, f)
+    for fn in ['control', 'postinst']:
+        path = f'CONTROL/{fn}'
+        if os.path.exists(path):
+            info = tf.gettarinfo(path, fn)
+            info.uid = info.gid = 0
+            info.uname = info.gname = 'root'
+            if fn == 'postinst':
+                info.mode = 0o755
+            with open(path, 'rb') as fh:
+                tf.addfile(info, fh)
 
-    ti2 = tarfile.TarInfo('./postinst')
-    ti2.size = os.path.getsize('CONTROL/postinst')
-    ti2.mode = 0o755
-    ti2.uid = ti2.gid = 0
-    with open('CONTROL/postinst', 'rb') as f:
-        tf.addfile(ti2, f)
-
-# data.tar.gz — USTAR for OpenWRT busybox compatibility
+# data.tar.gz (entries WITHOUT ./ prefix!)
 with tarfile.open('data.tar.gz', 'w:gz', format=tarfile.USTAR_FORMAT) as tf:
     for root, dirs, files in os.walk('data'):
         for d in dirs:
-            path = os.path.join(root, d)
-            arc = './' + os.path.relpath(path, 'data').replace('\\', '/') + '/'
-            ti = tarfile.TarInfo(arc)
-            ti.type = tarfile.DIRTYPE
-            ti.mode = 0o755
-            ti.uid = ti.gid = 0
-            tf.addfile(ti, io.BytesIO(b''))
+            arc = os.path.relpath(os.path.join(root, d), 'data').replace('\\', '/')
+            info = tarfile.TarInfo(arc)
+            info.type = tarfile.DIRTYPE
+            info.mode = 0o755
+            info.uid = info.gid = 0
+            info.uname = info.gname = 'root'
+            tf.addfile(info, io.BytesIO(b''))
         for fn in files:
             path = os.path.join(root, fn)
-            arc = './' + os.path.relpath(path, 'data').replace('\\', '/')
-            ti = tarfile.TarInfo(arc)
-            ti.size = os.path.getsize(path)
-            ti.mode = 0o755 if ('init.d' in arc or fn == 'broadlinkac_service.py' or arc.endswith('.sh')) else 0o644
-            ti.uid = ti.gid = 0
-            with open(path, 'rb') as f:
-                tf.addfile(ti, f)
+            arc = os.path.relpath(path, 'data').replace('\\', '/')
+            info = tf.gettarinfo(path, arc)
+            info.uid = info.gid = 0
+            info.uname = info.gname = 'root'
+            if 'init.d' in arc or 'acnexus_service.py' in arc or arc.endswith('.sh') or arc.endswith('.cgi'):
+                info.mode = 0o755
+            with open(path, 'rb') as fh:
+                tf.addfile(info, fh)
 
-# Build ar
-def ar_pad(data):
-    return data + b'\n' if len(data) % 2 else data
+# Build gzip-tar IPK (compatible with OpenWRT 24.10)
+out = '../acnexus_3.2-1_all.ipk'
+with tarfile.open(out, 'w:gz', format=tarfile.USTAR_FORMAT) as tf:
+    # Add as flat entries
+    for name in ['debian-binary', 'control.tar.gz', 'data.tar.gz']:
+        info = tarfile.TarInfo(name)
+        info.size = os.path.getsize(name)
+        info.uid = info.gid = 0
+        info.uname = info.gname = 'root'
+        with open(name, 'rb') as fh:
+            tf.addfile(info, fh)
 
-entries = [
-    ('debian-binary', os.stat('debian-binary')),
-    ('control.tar.gz', os.stat('control.tar.gz')),
-    ('data.tar.gz', os.stat('data.tar.gz')),
-]
-
-result = b'!<arch>\n'
-for name, st in entries:
-    hdr = (
-        name.ljust(16)[:16].encode() +
-        str(int(st.st_mtime)).ljust(12)[:12].encode() +
-        b'0     ' + b'0     ' +
-        b'100644  ' +
-        str(st.st_size).ljust(10)[:10].encode() +
-        b'`\n'
-    )
-    assert len(hdr) == 60, f'header len={len(hdr)}'
-    result += hdr
-    with open(name, 'rb') as f:
-        result += ar_pad(f.read())
-
-out = '../broadlinkac_3.2-1_aarch64_cortex-a53.ipk'
-with open(out, 'wb') as f:
-    f.write(result)
-print(f'Done: {out} ({len(result)} bytes)')
+print(f'Done: {out} ({os.path.getsize(out)} bytes)')

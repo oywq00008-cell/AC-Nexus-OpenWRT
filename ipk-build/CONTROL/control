@@ -1,12 +1,12 @@
-Package: broadlinkac
+Package: acnexus
 Version: 3.2-1
-Depends: python3-light, python3-broadlink, python3-schedule
+Depends: python3-light, python3-urllib, python3-email, python3-openssl, python3-xml
 Section: utils
-Architecture: aarch64_cortex-a53
+Architecture: all
 Maintainer: oywq00008-cell
 License: MIT
 Description: AI-powered smart AC controller for Broadlink RM series.
- Supports 14 AC brands, dual weather sources (Baidu/QWeather),
- NMC typhoon tracking, auto AC shutdown on storm <100km.
- v3.2: built-in hvac_ir (no pip), device rename, same-model dedup,
-  schedule templates with multi-day groups, standalone temp rules.
+ Supports 17 AC brands, dual weather sources (Baidu/QWeather),
+ NMC/NHC dual storm tracking with intelligent wind-speed+distance tiered shutdown,
+ multi-device management, schedule templates with multi-day groups,
+ standalone temp rules, built-in hvac_ir/broadlink/schedule/pyaes (zero pip).

@@ -1,6 +1,6 @@
 #!/bin/sh
-# 构建 BroadlinkAC .ipk 安装包
-# 输出: broadlinkac_3.2-1_aarch64_cortex-a53.ipk
+# 构建 AC-Nexus-OpenWRT .ipk 安装包
+# 输出: acnexus_3.2-1_aarch64_cortex-a53.ipk
 
 set -e
 cd "$(dirname "$0")"
@@ -16,9 +16,9 @@ echo "2.0" > "$BUILD/debian-binary"
 
 # ── control 文件 ──
 cat > "$BUILD/control/control" << 'CTRL'
-Package: broadlinkac
+Package: acnexus
 Version: 3.2-1
-Depends: python3-light, python3-broadlink, python3-schedule
+Depends: python3-light, python3-urllib, python3-email, python3-openssl, python3-xml
 Architecture: aarch64_cortex-a53
 Maintainer: oywq00008-cell
 License: MIT
@@ -31,7 +31,7 @@ POST
 chmod +x "$BUILD/control/postinst"
 
 # ── 复制数据文件 ──
-cp -r broadlinkac/files/* "$BUILD/data/"
+cp -r acnexus/files/* "$BUILD/data/"
 
 # ── Python 构建（避免 macOS BSD tar 兼容问题）──
 python3 << 'PYEOF'
@@ -76,14 +76,14 @@ with tarfile.open(fileobj=dbuf, mode='w:gz', format=tarfile.GNU_FORMAT) as tf:
             ti = tf.gettarinfo(path, f'./{arc}')
             ti.uid = ti.gid = 0
             ti.uname = ti.gname = 'root'
-            if 'init.d' in arc or 'broadlinkac_service.py' in arc or arc.endswith('.sh') or arc.endswith('.cgi'):
+            if 'init.d' in arc or 'acnexus_service.py' in arc or arc.endswith('.sh') or arc.endswith('.cgi'):
                 ti.mode = 0o755
             with open(path, 'rb') as f:
                 tf.addfile(ti, f)
 dbuf.seek(0)
 
 # 合并为 ipk（无 ./ 前缀！）
-with tarfile.open('../../broadlinkac_3.2-1_aarch64_cortex-a53.ipk', 'w:gz', format=tarfile.GNU_FORMAT) as tf:
+with tarfile.open('../../acnexus_3.2-1_aarch64_cortex-a53.ipk', 'w:gz', format=tarfile.GNU_FORMAT) as tf:
     ti = tarfile.TarInfo('debian-binary')
     ti.size = 4
     ti.uid = ti.gid = 0
@@ -104,5 +104,5 @@ with tarfile.open('../../broadlinkac_3.2-1_aarch64_cortex-a53.ipk', 'w:gz', form
 
 PYEOF
 
-SIZE=$(du -h broadlinkac_3.2-1_aarch64_cortex-a53.ipk | cut -f1)
-echo "Done: broadlinkac_3.2-1_aarch64_cortex-a53.ipk (${SIZE})"
+SIZE=$(wc -c acnexus_3.2-1_aarch64_cortex-a53.ipk | awk '{print $1}')
+echo "Done: acnexus_3.2-1_aarch64_cortex-a53.ipk (${SIZE} bytes)"

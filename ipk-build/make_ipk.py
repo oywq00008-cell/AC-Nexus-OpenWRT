@@ -19,7 +19,7 @@ with tarfile.open('data.tar.gz', 'w:gz') as tf:
 
 # Create ar archive (.ipk)
 files = ['debian-binary', 'control.tar.gz', 'data.tar.gz']
-ipk_path = '../broadlinkac_3.2-1_aarch64_cortex-a53.ipk'
+ipk_path = '../acnexus_3.2-1_aarch64_cortex-a53.ipk'
 with open(ipk_path, 'wb') as ar:
     ar.write(b'!<arch>\n')
     for fname in files:

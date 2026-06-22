@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""BroadlinkAC IPK 构建脚本
-输出: broadlinkac_3.2-1_all.ipk
+"""AC-Nexus-OpenWRT IPK 构建脚本
+输出: acnexus_3.2-1_all.ipk
 """
 
 import tarfile, io, os, shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.join(ROOT, 'broadlinkac', 'files')
+SRC = os.path.join(ROOT, 'acnexus', 'files')
 BUILD = os.path.join(ROOT, 'ipk_build')
-OUT = os.path.join(ROOT, 'broadlinkac_3.2-1_all.ipk')
+OUT = os.path.join(ROOT, 'acnexus_3.2-1_all.ipk')
 
 # ── 清理 ──
 if os.path.exists(BUILD):
@@ -26,17 +26,24 @@ with open(f'{BUILD}/debian-binary', 'w') as f:
 # ── control 文件 ──
 with open(f'{BUILD}/control/control', 'w') as f:
     f.write(
-        'Package: broadlinkac\n'
+        'Package: acnexus\n'
         'Version: 3.2-1\n'
-        'Depends: python3-light, python3-schedule\n'
+        'Depends: python3-light, python3-urllib, python3-email, python3-openssl, python3-xml\n'
         'Architecture: all\n'
         'Maintainer: oywq00008-cell\n'
         'License: MIT\n'
         'Description: AI-powered smart AC controller for Broadlink RM.\n'
     )
 
-with open(f'{BUILD}/control/postinst', 'w') as f:
-    f.write('#!/bin/sh\nexit 0\n')
+# ── postinst（从外部模板读取，统一由 ipk-build/CONTROL/postinst 维护）──
+POSTINST_SRC = os.path.join(ROOT, 'ipk-build', 'CONTROL', 'postinst')
+if os.path.exists(POSTINST_SRC):
+    with open(POSTINST_SRC, 'r', encoding='utf-8') as pf:
+        postinst_content = pf.read().replace('\r\n', '\n').replace('\r', '\n')
+else:
+    postinst_content = '#!/bin/sh\nexit 0\n'
+with open(f'{BUILD}/control/postinst', 'w', newline='\n') as f:
+    f.write(postinst_content)
 os.chmod(f'{BUILD}/control/postinst', 0o755)
 
 # ── 复制数据文件（跳过垃圾）──
@@ -85,7 +92,7 @@ with tarfile.open(fileobj=dbuf, mode='w:gz', format=tarfile.GNU_FORMAT) as tf:
             ti = tf.gettarinfo(path, arc)
             ti.uid = ti.gid = ti.mtime = 0
             ti.uname = ti.gname = 'root'
-            if 'init.d' in arc or 'broadlinkac_service.py' in arc or arc.endswith('.sh') or arc.endswith('.cgi'):
+            if 'init.d' in arc or 'acnexus_service.py' in arc or arc.endswith('.sh') or arc.endswith('.cgi'):
                 ti.mode = 0o755
             with open(path, 'rb') as f:
                 tf.addfile(ti, f)

@@ -1,10 +1,10 @@
 ========================================
-     BroadlinkAC 智能空调控制器
+     AC-Nexus-OpenWRT 智能空调控制器
            安装说明
             v3.2
 ========================================
 
-【 什么是 BroadlinkAC ？】
+【 什么是 AC-Nexus-OpenWRT ？】
 
 一个运行在 OpenWRT 路由器上的插件。你只需要一个博联 RM 红外遥控器，
 不用找空调遥控器，在手机/电脑上打开浏览器就能控制空调。
@@ -20,7 +20,7 @@
 
 【 安装步骤简览 】
 
-   ① 下载压缩包 → 解压得到 broadlinkac_3.2.run
+   ① 下载压缩包 → 解压得到 acnexus_3.2.run
    ② 用命令上传到路由器的 /tmp/ 目录
    ③ SSH 登录执行安装命令
    ④ 浏览器打开 LuCI 页面，扫描设备、配好 API，开始用
@@ -46,7 +46,7 @@ Linux：
   第二步：上传文件到路由器
 ========================================
 
-把下载的 broadlinkac_3.2.run 文件放到终端当前目录，
+把下载的 acnexus_3.2.run 文件放到终端当前目录，
 或者先 cd 到文件所在目录：
 
   cd ~/Downloads
@@ -57,7 +57,7 @@ Linux：
   ┌─────────────────────────────────────────────────────┐
   │  macOS / Linux / Windows（三平台通用）：            │
   │                                                     │
-  │  scp broadlinkac_3.2.run root@你的路由器IP:/tmp/     │
+  │  scp acnexus_3.2.run root@你的路由器IP:/tmp/     │
   │                                                     │
   │  输入路由器密码（密码不显示，这是正常的，放心输入） │
   └─────────────────────────────────────────────────────┘
@@ -68,7 +68,7 @@ Windows 常见问题：
   解决方法：下载 WinSCP（百度搜一下），这是图形化工具，
   鼠标拖拽就能传文件到路由器。
   WinSCP 用法：连接 root@你的路由器IP → 右边远程目录填 /tmp
-  → 左边找到 broadlinkac_3.2.run 拖到右边 → 完成。
+  → 左边找到 acnexus_3.2.run 拖到右边 → 完成。
 
 
 ========================================
@@ -78,11 +78,11 @@ Windows 常见问题：
   ┌─────────────────────────────────────────────────────────┐
   │  macOS / Linux：                                        │
   │                                                         │
-  │  ssh root@你的路由器IP "bash /tmp/broadlinkac_3.2.run"   │
+  │  ssh root@你的路由器IP "bash /tmp/acnexus_3.2.run"   │
   │                                                         │
   │  Windows（PowerShell 或 Win11/Win10 自带 OpenSSH）：     │
   │                                                         │
-  │  ssh root@你的路由器IP "bash /tmp/broadlinkac_3.2.run"   │
+  │  ssh root@你的路由器IP "bash /tmp/acnexus_3.2.run"   │
   │                                                         │
   │  一两分钟安装完成，看到"安装完成"字样即可。              │
   └─────────────────────────────────────────────────────────┘
@@ -93,14 +93,14 @@ Windows 连不上 SSH？
   下载 PuTTY（百度搜一下），用图形界面连接路由器：
     主机名：root@你的路由器IP
     连接后输入密码
-    然后输入：bash /tmp/broadlinkac_3.2.run
+    然后输入：bash /tmp/acnexus_3.2.run
 
 
 ========================================
   第四步：开始使用
 ========================================
 
-1. 浏览器打开 http://你的路由器IP/cgi-bin/luci/admin/services/broadlinkac
+1. 浏览器打开 http://你的路由器IP/cgi-bin/luci/admin/services/acnexus
 
 2. 首次使用需要配置：
    a) 在「设置」页填写和风天气 API Key（免费申请教程见 GitHub）
@@ -117,12 +117,12 @@ Windows 连不上 SSH？
 
 SSH 登录路由器后执行：
 
-  rm -rf /usr/lib/broadlinkac
-  rm -rf /usr/lib/lua/luci/*/broadlinkac*
-  rm -f /etc/init.d/broadlinkac
-  rm -f /etc/config/broadlinkac
-  rm -f /www/cgi-bin/broadlinkac.cgi
-  rm -f /etc/uci-defaults/99-broadlinkac
+  rm -rf /usr/lib/acnexus
+  rm -rf /usr/lib/lua/luci/*/acnexus*
+  rm -f /etc/init.d/acnexus
+  rm -f /etc/config/acnexus
+  rm -f /www/cgi-bin/broadlink.cgi
+  rm -f /etc/uci-defaults/99-acnexus
   rm -f /tmp/luci-indexcache*
 
 
@@ -141,7 +141,7 @@ A: 支持 16 个品牌：格力/美的/华凌/小米/海尔/海信/日立/
    大金/三菱/松下/富士通/奥克斯/巴鲁/开利/现代/Fuego
 
 Q: 安装了但是浏览器页面打不开？
-A: 在路由器终端执行 /etc/init.d/broadlinkac start
+A: 在路由器终端执行 /etc/init.d/acnexus start
 
 Q: 天气数据不显示？
 A: 需要先申请和风天气免费 API Key，填入设置页。
@@ -151,7 +151,7 @@ A: 需要先申请和风天气免费 API Key，填入设置页。
   更多帮助
 ========================================
 
-GitHub：https://github.com/oywq00008-cell/BroadlinkAC-OpenWRT
+GitHub：https://github.com/oywq00008-cell/AC-Nexus-OpenWRT
 详细教程：解压包里有 使用指南.md（双击打开即可阅读）
 
 by 欧阳小白

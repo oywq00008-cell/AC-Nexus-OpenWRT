@@ -1,4 +1,114 @@
 #!/bin/sh
-# BroadlinkAC post-install script
-# hvac_ir is bundled in the IPK, no pip needed
+# AC-Nexus-OpenWRT post-install script
+# 自动完成：权限修复、CRLF 清理、config 生成、缓存刷新、服务启动
+
+echo ""
+echo "  AC-Nexus-OpenWRT 安装中..."
+
+# ── [1/6] 修复 CRLF 换行符（防止 LuCI 模板语法错误）──
+echo "  [1/6] 修复文本格式..."
+for f in \
+    /etc/init.d/acnexus \
+    /etc/uci-defaults/99-acnexus \
+    /etc/config/acnexus \
+    /www/cgi-bin/acnexus.cgi \
+    /usr/lib/lua/luci/view/acnexus/dashboard.htm \
+    /usr/lib/lua/luci/controller/acnexus.lua \
+    /usr/lib/lua/luci/model/cbi/acnexus.lua \
+; do
+    [ -f "$f" ] && sed -i 's/\r//' "$f" 2>/dev/null
+done
+
+# ── [2/6] 设置可执行权限 ──
+echo "  [2/6] 设置权限..."
+chmod +x /etc/init.d/acnexus 2>/dev/null
+chmod +x /etc/uci-defaults/99-acnexus 2>/dev/null
+chmod +x /www/cgi-bin/acnexus.cgi 2>/dev/null
+chmod +x /usr/lib/acnexus/acnexus_service.py 2>/dev/null
+
+# ── [3/6] 安装 pycryptodome（小米 MIoT 需要 ARC4）──
+# ── [3/6] 验证 Python 核心模块 ──
+echo "  [3/6] 验证 Python 模块..."
+python3 -c "
+import sys
+sys.path.insert(0, '/usr/lib/acnexus')
+for mod in ['broadlink', 'schedule', 'pyaes']:
+    __import__(mod)
+import urllib, ssl, email, xml.etree.ElementTree
+print('OK')
+" && echo "  所有依赖通过 ✅" || echo "  ⚠️ 部分依赖缺失"
+
+# ── [4/6] 生成 config.json ──
+echo "  [4/6] 生成配置文件..."
+if [ ! -f /root/.ac_controller/config.json ]; then
+    mkdir -p /root/.ac_controller/logs
+
+    # 从 UCI 读取设置（如果用户在 CBI 页面填过，UCI 里就有值）
+    get_uci() {
+        uci -q get acnexus.@acnexus[0].$1 2>/dev/null || echo ""
+    }
+    get_uci_bool() {
+        val=$(uci -q get acnexus.@acnexus[0].$1 2>/dev/null || echo "0")
+        [ "$val" = "1" ] && echo "true" || echo "false"
+    }
+
+    cat > /root/.ac_controller/config.json << 'JSONEOF'
+{
+  "api_key": "APIKEY",
+  "qw_host": "QWHOST",
+  "baidu_key": "BDKEY",
+  "weather_provider": "WP",
+  "weather_provider_set": true,
+  "location": {
+    "lat": LAT,
+    "lon": LON,
+    "name": "LOCNAME"
+  },
+  "typhoon_provider": "TP",
+  "typhoon_ac_off": ACOFF,
+  "appearance_mode": "system",
+  "enabled": true,
+  "devices": {"broadlink": {}, "xiaomi_cloud": {}},
+  "current_device_mac": "",
+  "current_brand_type": "broadlink"
+}
+JSONEOF
+
+    sed -i "s/APIKEY/$(get_uci api_key)/" /root/.ac_controller/config.json
+    sed -i "s|QWHOST|$(get_uci qw_host)|" /root/.ac_controller/config.json
+    sed -i "s/BDKEY/$(get_uci baidu_key)/" /root/.ac_controller/config.json
+    sed -i "s/WP/$(get_uci weather_provider)/" /root/.ac_controller/config.json
+    sed -i "s/LAT/$(get_uci location_lat)/" /root/.ac_controller/config.json
+    sed -i "s/LON/$(get_uci location_lon)/" /root/.ac_controller/config.json
+    sed -i "s/LOCNAME/$(get_uci location_name)/" /root/.ac_controller/config.json
+    sed -i "s/TP/$(get_uci typhoon_provider)/" /root/.ac_controller/config.json
+    sed -i "s/ACOFF/$(get_uci_bool typhoon_ac_off)/" /root/.ac_controller/config.json
+
+    echo "  config.json 已创建"
+else
+    echo "  config.json 已存在，跳过"
+fi
+
+# ── [5/6] 刷新 LuCI 缓存 ──
+echo "  [5/6] 刷新 LuCI 缓存..."
+rm -f /tmp/luci-indexcache* /tmp/luci-modulecache/* 2>/dev/null
+
+# ── [6/6] 启动服务 ──
+echo "  [6/6] 启动服务..."
+/etc/init.d/acnexus enable 2>/dev/null
+/etc/init.d/acnexus start 2>/dev/null
+
+sleep 2
+if ps | grep -q "[a]cnexus_service"; then
+    LAN_IP=$(uci get network.lan.ipaddr 2>/dev/null || echo "你的路由器IP")
+    echo ""
+    echo "  ======================================"
+    echo "    AC-Nexus-OpenWRT 安装完成 ✅"
+    echo "    http://${LAN_IP}/cgi-bin/luci/admin/services/acnexus"
+    echo "  ======================================"
+else
+    echo "  ⚠️ 服务未启动，请检查: /etc/init.d/acnexus start"
+fi
+echo ""
+
 exit 0
