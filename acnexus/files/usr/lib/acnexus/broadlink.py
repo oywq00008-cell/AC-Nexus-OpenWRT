@@ -239,6 +239,7 @@ class Device:
         self.name = name
         self.model = model
         self.is_locked = is_locked
+        self._is_old_firmware = devtype in _OLD_FMT_TYPES  # old rmmini/rmpro use different packet format
         self.count = random.randint(0x8000, 0xFFFF)
         self.iv = bytes.fromhex(self.__INIT_VECT)
         self.id = 0
@@ -340,13 +341,22 @@ class Device:
         return resp
 
     def _rm_send(self, command: int, data: bytes = b"") -> bytes:
-        """Send RM command. Uses 'new firmware' packet format (compatible with all RM)."""
-        packet = struct.pack("<HI", len(data) + 4, command) + data
-        resp = self._send_packet(0x6A, packet)
-        _check_error(resp[0x22:0x24])
-        payload = self._decrypt(resp[0x38:])
-        p_len = struct.unpack("<H", payload[:0x2])[0]
-        return payload[0x6:p_len + 2]
+        """Send RM command. Auto-detects old vs new firmware packet format."""
+        if self._is_old_firmware:
+            # Old format (rmmini, rmpro): struct.pack("<I", command) + data
+            packet = struct.pack("<I", command) + data
+            resp = self._send_packet(0x6A, packet)
+            _check_error(resp[0x22:0x24])
+            payload = self._decrypt(resp[0x38:])
+            return payload[0x4:]
+        else:
+            # New format (rmminib, rm4mini, rm4pro): struct.pack("<HI", len+4, command) + data
+            packet = struct.pack("<HI", len(data) + 4, command) + data
+            resp = self._send_packet(0x6A, packet)
+            _check_error(resp[0x22:0x24])
+            payload = self._decrypt(resp[0x38:])
+            p_len = struct.unpack("<H", payload[:0x2])[0]
+            return payload[0x6:p_len + 2]
 
     def send_data(self, data: bytes) -> None:
         """Send IR code data to the device."""
@@ -371,11 +381,16 @@ def pulses_to_data(pulses: List[int], tick: float = 32.84) -> bytes:
 
 
 # ═══════════════ Public API ═══════════════
-_SUPPORTED_RM_TYPES = {
+# Old firmware format (rmmini + rmpro): struct.pack("<I", command)
+_OLD_FMT_TYPES = {
     0x2712, 0x272A, 0x2737, 0x273D, 0x277C, 0x2783, 0x2787, 0x278B,
     0x278F, 0x2797, 0x279D, 0x27A1, 0x27A6, 0x27A9, 0x27B7, 0x27C2,
     0x27C3, 0x27C7, 0x27CC, 0x27CD, 0x27D0, 0x27D1, 0x27D3, 0x27DC,
-    0x27DE, 0x51DA, 0x5209, 0x520B, 0x520C, 0x520D, 0x5211, 0x5212,
+    0x27DE,
+}
+# New firmware format (rmminib + rm4mini + rm4pro): struct.pack("<HI", len+4, command)
+_NEW_FMT_TYPES = {
+    0x51DA, 0x5209, 0x520B, 0x520C, 0x520D, 0x5211, 0x5212,
     0x5213, 0x5216, 0x5218, 0x521C, 0x5F36, 0x6026, 0x6070, 0x610E,
     0x610F, 0x6184, 0x61A2, 0x62BC, 0x62BE, 0x6364, 0x648D, 0x649B,
     0x6507, 0x6508, 0x6539, 0x653A, 0x653C,
@@ -414,13 +429,15 @@ def discover(
     for devtype, host, mac, name, is_locked in _scan(
         timeout, local_ip_address, discover_ip_address, discover_ip_port,
     ):
-        if devtype not in _SUPPORTED_RM_TYPES:
+        if devtype not in _OLD_FMT_TYPES and devtype not in _NEW_FMT_TYPES:
             continue  # skip non-RM devices (sockets, sensors, etc.)
         model = _RM_MODELS.get(devtype, "RM device")
-        results.append(Device(
+        dev = Device(
             host, mac, devtype, timeout=timeout,
             name=name or model, model=model, is_locked=is_locked,
-        ))
+        )
+        dev._is_old_firmware = devtype in _OLD_FMT_TYPES
+        results.append(dev)
     return results
 
 
