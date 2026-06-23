@@ -101,7 +101,7 @@
 
 <div class="ac-container">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-  <select id="devSelect" onchange="switchDevice(this.value)" style="font-size:11px;padding:2px 6px;border:1px solid var(--border,#ddd);border-radius:4px;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text,#333);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><option value="">无设备</option></select>
+  <select id="devSelect" onchange="switchDevice(this.value)" style="font-size:11px;padding:2px 6px;border:1px solid var(--border,#ddd);border-radius:4px;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text,#333);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><option value="">--</option></select>
   <span style="display:flex;gap:4px;align-items:center">
     <span style="font-size:11px;color:var(--cbi-text-secondary)" id="refreshInfo"></span>
     <button class="ac-toolbar-btn" onclick="openModal('schedule')" title="定时 & 调温" style="font-size:16px">&#x23F0;</button>
@@ -234,6 +234,7 @@
       <span>改名：</span><input type="text" id="devNameInput" placeholder="输入新名称" style="width:60%;font-size:12px;padding:4px 6px">
     </div>
     <button class="ac-save-btn" onclick="saveDevice()">&#x1F4BE; 保存设置</button>
+    <button class="ac-save-btn" onclick="deleteDevice()" style="background:#c0392b;margin-top:8px">&#x1F5D1; 删除设备</button>
   </div>
 </div>
 
@@ -272,8 +273,14 @@
   <div class="ac-modal">
     <div class="ac-modal-title">小米设备 <button class="ac-modal-close" onclick="closeModal('xiaomi')">&times;</button></div>
     <div id="xiaomiContent" style="font-size:13px;color:var(--cbi-text,#333)">
-      <p id="xiaomiMsg" style="margin-bottom:12px">点击下方按钮跳转至小米登录界面</p>
-      <button class="ac-save-btn" onclick="doXiaomiLogin()" id="xiaomiLoginBtn">前往登录</button>
+      <p id="xiaomiMsg" style="margin-bottom:12px;text-align:center">点击下方按钮生成二维码</p>
+      <div style="text-align:center;margin:8px 0">
+        <img id="xiaomiQR" src="" style="display:none;max-width:200px;border:1px solid var(--border,#ddd);border-radius:8px">
+      </div>
+      <div style="text-align:center;margin:8px 0">
+        <a id="xiaomiLoginLink" href="#" target="_blank" style="display:none;font-size:11px;color:var(--cbi-link,#3498db);word-break:break-all">或点击此链接</a>
+      </div>
+      <button class="ac-save-btn" onclick="doXiaomiLogin()" id="xiaomiLoginBtn" style="display:block;margin:0 auto">生成二维码</button>
       <div id="xiaomiDeviceList" style="display:none;margin-top:12px;max-height:300px;overflow-y:auto"></div>
       <button class="ac-save-btn" onclick="doXiaomiAdd()" id="xiaomiAddBtn" style="display:none;margin-top:12px;background:#27ae60">确认添加</button>
     </div>
@@ -296,7 +303,7 @@ var _activeTemplate = '';      // 当前设备绑定的模板名
 var _schedEnabled = true;      // 定时任务总开关
 var _editingGroupIdx = 0;
 
-function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
+function b64(s) { return btoa(encodeURIComponent(s).replace(/%([0-9A-F]{2})/g, function(m,p){return String.fromCharCode('0x'+p)})); }
 
 function api(cmd) {
   return fetch(API + '?cmd=' + encodeURIComponent(cmd), {credentials:'include'})
@@ -306,10 +313,39 @@ function api(cmd) {
 
 function loadAll(force) {
   document.getElementById('refreshInfo').textContent = '\u{23F3}';
-  var cmd = force ? 'refresh' : 'status';
+  var cmd = force ? 'refresh' : 'status_lite';  // 首次用 Lua 秒出，强制刷新用 Python
   api(cmd).then(function(d){
     statusData = d; updateStatus(d);
     document.getElementById('refreshInfo').textContent = '';
+    // 天气缺失时自动轮询（换位置/首次安装等场景）
+    if (!force && d && d.weather && d.weather.temp === '--') {
+      var _polls = 0;
+      var _pollTimer = setInterval(function(){
+        if (_polls++ > 5) { clearInterval(_pollTimer); return; }
+        api('status_lite').then(function(wd){
+          if (wd && wd.weather && wd.weather.temp !== '--') {
+            statusData.weather = wd.weather;
+            if (wd.storm_name) { statusData.storm_dist = wd.storm_dist; statusData.storm_name = wd.storm_name; }
+            updateStatus(statusData);
+            clearInterval(_pollTimer);
+          }
+        });
+      }, 8000);
+    }
+    // 非强制刷新时，后台异步拉 Python 全量数据（天气/台风），只补充不覆盖
+    if (!force) {
+      setTimeout(function(){
+        api('status').then(function(full){
+          if (full && !full.error && !full.disabled) {
+            // 只更新有数据的字段，不覆盖已有的好数据
+            if (full.weather && full.weather.temp && full.weather.temp !== '--') statusData.weather = full.weather;
+            if (full.storm_name) { statusData.storm_dist = full.storm_dist; statusData.storm_name = full.storm_name; }
+            if (full.state && full.state.power) statusData.state = full.state;
+            updateStatus(statusData);
+          }
+        });
+      }, 100);
+    }
     // 无设备时后台自动扫描，不阻塞主界面渲染
     if (!force && d && !d.disabled && (!d.devices || d.devices.length === 0)) {
       document.getElementById('refreshInfo').textContent = '首次自动扫描...';
@@ -350,7 +386,7 @@ function updateStatus(d) {
 
   var sel = document.getElementById('devSelect');
   var devs = d.devices || [];
-  sel.innerHTML = '<option value=\"\">' + (devs.length ? devs.length + ' 台设备' : '无设备') + '</option>';
+  sel.innerHTML = '<option value=\"\">--</option>';
   for (var i=0; i<devs.length; i++) {
     var opt = document.createElement('option');
     opt.value = devs[i].mac;
@@ -413,12 +449,31 @@ function doSend() {
   var pm = {on:'开机', off:'关机'};
   var mm = {cool:'制冷', heat:'制热', dry:'除湿', fan:'送风'};
   var fm = {auto:'自动', low:'低', medium:'中', high:'高'};
-  var s = '✅ 已发送: ' + (pm[current.power]||current.power) + ' ' +
-          (mm[current.mode]||current.mode) + ' ' + current.temp + '°C ' +
-          (fm[current.fan]||current.fan);
-  api('send ' + current.power + ' ' + current.mode + ' ' + current.temp + ' ' + current.fan).then(function(d){
-    if (d.ok) { showError(s); }
-    else showError('❌ ' + (d.error || '失败'));
+  var s = '\u23F3 发送中...';
+  showError(s);
+  var cmd = 'send ' + current.power + ' ' + current.mode + ' ' + current.temp + ' ' + current.fan;
+  api(cmd).then(function(d){
+    if (d.queued) {
+      // 后台服务处理中，轮询结果
+      var _tries = 0;
+      var _poll = setInterval(function(){
+        if (_tries++ > 30) { clearInterval(_poll); showError('\u274C 发送超时'); return; }
+        api('cmd_result').then(function(r){
+          if (r.ok) {
+            clearInterval(_poll);
+            showError('\u2705 ' + (r.msg || '已发送'));
+            loadAll();  // 刷新状态
+          } else if (!r.pending) {
+            clearInterval(_poll);
+            showError('\u274C ' + (r.error || '发送失败'));
+          }
+        });
+      }, 300);
+    } else if (d.ok) {
+      showError(s);
+    } else {
+      showError('\u274C ' + (d.error || '失败'));
+    }
   });
 }
 function showError(msg) {
@@ -455,8 +510,17 @@ function discoverDevices() {
 }
 function switchDevice(mac) {
   if (!mac) return;
+  current.devMac = mac;
   api('switch ' + mac).then(function(d){
-    if (d.ok) { current.devMac = mac; loadAll(); }
+    if (d.ok) {
+      // 更新缓存并渲染（updateStatus 统一处理 devName/设备信息/在线状态）
+      statusData = statusData || {};
+      statusData.device_name = d.device_name || mac;
+      statusData.device_info = d.device_info || statusData.device_info || {};
+      statusData.online = d.online;
+      updateStatus(statusData);
+      document.getElementById('devSelect').value = mac;
+    }
   });
 }
 
@@ -802,20 +866,28 @@ function saveSchedule() {
 
 // ── 设备设置弹窗 ──
 function fillDeviceForm() {
-  var d = statusData;
-  var devName = '--';
+  var d = statusData || {};
+  // 直接用后端返回的 device_name（初始加载 + 切换设备都会更新）
+  var devName = (d.device_name && d.device_name !== '--') ? d.device_name : '--';
   var isXiaomi = false;
-  if (d && d.devices && d.devices.length > 0) {
-    var curMac = current.devMac || '';
-    for (var i = 0; i < d.devices.length; i++) {
-      if (d.devices[i].mac === curMac) { devName = d.devices[i].name; isXiaomi = d.devices[i].provider === 'xiaomi_cloud'; break; }
+  // 从 devices 数组判断是否为小米设备
+  var curMac = current.devMac || '';
+  var devs = d.devices || [];
+  for (var i = 0; i < devs.length; i++) {
+    if (devs[i].mac === curMac) {
+      isXiaomi = devs[i].provider === 'xiaomi_cloud';
+      break;
     }
-    if (devName === '--') { devName = d.devices[0].name; isXiaomi = d.devices[0].provider === 'xiaomi_cloud'; }
   }
-  document.getElementById('devSetName').textContent = devName;
+  // 兜底：device_name 为空时用首台
+  if (devName === '--' && devs.length > 0) {
+    devName = devs[0].name || '--';
+    isXiaomi = devs[0].provider === 'xiaomi_cloud';
+  }
   var info = d.device_info || {};
-  document.getElementById('devNameInfo').textContent = d.device_name || '--';
-  document.getElementById('devNameInput').value = d.device_name || '';
+  document.getElementById('devSetName').textContent = devName;
+  document.getElementById('devNameInfo').textContent = devName;
+  document.getElementById('devNameInput').value = devName;
   document.getElementById('devMacInfo').textContent = info.mac || '--';
   document.getElementById('devIpInfo').textContent = info.host || '--';
   // 小米设备品牌由米家 App 控制，禁用选择
@@ -835,7 +907,7 @@ function fillDeviceForm() {
       opt.textContent = b[1];
       var displayMatch = (info.brand_display && info.brand_display === b[1]);
       var valueMatch = (!info.brand_display && b[0] === (info.brand || 'gree'));
-      if (displayMatch || valueMatch) opt.selected = true;
+      if (displayMatch || valueMatch) { opt.selected = true; }
       sel.appendChild(opt);
     }
   }
@@ -890,6 +962,16 @@ function saveDevice() {
   });
 }
 
+function deleteDevice() {
+  var mac = (statusData.device_info || {}).mac || current.devMac || '';
+  if (!mac) { showError('无法获取设备 MAC'); return; }
+  if (!confirm('确定删除这台设备吗？')) return;
+  api('delete_device ' + mac).then(function(d){
+    if (d.ok) { closeModal('device'); loadAll(); }
+    else showError(d.error || '删除失败');
+  });
+}
+
 loadAll();
 
 // ── 米家设备添加 ──
@@ -899,28 +981,37 @@ var _xiaomiLoginUrl = '';
 function openXiaomiModal() {
   _xiaomiDevices = [];
   _xiaomiLoginUrl = '';
-  document.getElementById('xiaomiMsg').textContent = '点击下方按钮跳转至小米登录界面';
+  document.getElementById('xiaomiQR').style.display = 'none';
+  document.getElementById('xiaomiLoginLink').style.display = 'none';
+  document.getElementById('xiaomiMsg').textContent = '正在生成二维码...';
   document.getElementById('xiaomiLoginBtn').style.display = 'block';
+  document.getElementById('xiaomiLoginBtn').textContent = '生成二维码';
+  document.getElementById('xiaomiLoginBtn').onclick = doXiaomiLogin;
   document.getElementById('xiaomiDeviceList').style.display = 'none';
   document.getElementById('xiaomiAddBtn').style.display = 'none';
   openModal('xiaomi');
-  api('xiaomi_login').then(function(r){
-    if (r.login_url) {
-      _xiaomiLoginUrl = r.login_url;
-      document.getElementById('xiaomiMsg').textContent = '新窗口将打开小米登录页，扫码后回到此处';
-    } else {
-      document.getElementById('xiaomiMsg').textContent = '初始化失败: ' + (r.error || '未知');
-    }
-  });
 }
 
 function doXiaomiLogin() {
-  if (_xiaomiLoginUrl) {
-    window.open(_xiaomiLoginUrl, '_blank');
-    document.getElementById('xiaomiMsg').textContent = '请在新窗口扫码登录，完成后点下方按钮检测';
-    document.getElementById('xiaomiLoginBtn').textContent = '检测登录状态';
-    document.getElementById('xiaomiLoginBtn').onclick = doXiaomiPoll;
-  }
+  document.getElementById('xiaomiMsg').textContent = '正在获取登录链接...';
+  document.getElementById('xiaomiLoginBtn').disabled = true;
+  api('xiaomi_login').then(function(r){
+    document.getElementById('xiaomiLoginBtn').disabled = false;
+    if (r.login_url) {
+      _xiaomiLoginUrl = r.login_url;
+      // 用 api.qrserver.com 生成二维码（Google Charts 在国内可能被墙）
+      var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(r.login_url);
+      document.getElementById('xiaomiQR').src = qrUrl;
+      document.getElementById('xiaomiQR').style.display = 'block';
+      document.getElementById('xiaomiLoginLink').href = r.login_url;
+      document.getElementById('xiaomiLoginLink').style.display = 'block';
+      document.getElementById('xiaomiMsg').textContent = '请用米家 App 扫描二维码，或点击链接打开';
+      document.getElementById('xiaomiLoginBtn').textContent = '检测登录状态';
+      document.getElementById('xiaomiLoginBtn').onclick = doXiaomiPoll;
+    } else {
+      document.getElementById('xiaomiMsg').textContent = '失败: ' + (r.error || '未知');
+    }
+  });
 }
 
 function doXiaomiPoll() {

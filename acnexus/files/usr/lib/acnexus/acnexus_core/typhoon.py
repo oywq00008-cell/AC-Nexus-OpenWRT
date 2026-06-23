@@ -269,10 +269,43 @@ def fetch_nhc_storms():
 
 # ── 台风缓存与调度 ──
 _ty_cache = []
+_TY_CACHE_FILE = "/tmp/acnexus_typhoon.json"
+_TY_CACHE_TTL = 1800  # 30 分钟
+
+
+def _load_file_cache():
+    """从文件加载台风缓存"""
+    import os, json, time
+    if os.path.exists(_TY_CACHE_FILE):
+        try:
+            with open(_TY_CACHE_FILE) as f:
+                d = json.load(f)
+            if d.get("ts", 0) > time.time() - _TY_CACHE_TTL:
+                return d.get("data", [])
+        except Exception:
+            pass
+    return None
+
+
+def _save_file_cache(data):
+    """保存台风缓存到文件（原子写入）"""
+    import json, time, os
+    tmp = _TY_CACHE_FILE + ".tmp"
+    try:
+        with open(tmp, "w") as f:
+            json.dump({"ts": time.time(), "data": data}, f)
+        os.rename(tmp, _TY_CACHE_FILE)
+    except Exception:
+        pass
 
 
 def fetch_and_cache():
     global _ty_cache
+    # 先尝试文件缓存
+    cached = _load_file_cache()
+    if cached is not None:
+        _ty_cache = cached
+        return
     try:
         import acnexus_core.config as _cfg
         provider = _cfg.config.get("typhoon_provider", "nmc")
@@ -288,13 +321,31 @@ def fetch_and_cache():
                         "code": t.get("code", ""), "meaning": t.get("meaning", ""),
                         "detail": d
                     })
+        _save_file_cache(_ty_cache)
     except Exception as e:
         _ty_cache = []
         print(f"[台风缓存] {e}", file=sys.stderr)
 
 
 def get_cached():
+    # 优先文件缓存（跨进程持久化）
+    cached = _load_file_cache()
+    if cached is not None:
+        return cached
     return _ty_cache
+
+
+def has_recent_cache():
+    """判断是否有有效缓存（用于跳过 fetch_and_cache）"""
+    import os, json, time
+    if os.path.exists(_TY_CACHE_FILE):
+        try:
+            with open(_TY_CACHE_FILE) as f:
+                d = json.load(f)
+            return d.get("ts", 0) > time.time() - _TY_CACHE_TTL
+        except Exception:
+            pass
+    return False
 
 
 # 台风日志去重：同等级同距离 50km 内不重复写日志

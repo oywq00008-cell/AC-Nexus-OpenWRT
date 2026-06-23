@@ -86,7 +86,7 @@ with tarfile.open('data.tar.gz', 'w:gz', format=tarfile.USTAR_FORMAT) as tf:
                 tf.addfile(info, fh)
 
 # Build gzip-tar IPK (compatible with OpenWRT 24.10)
-out = '../acnexus_3.2-1_all.ipk'
+out = '../acnexus_openwrt_v5.0bt2_all.ipk'
 with tarfile.open(out, 'w:gz', format=tarfile.USTAR_FORMAT) as tf:
     # Add as flat entries
     for name in ['debian-binary', 'control.tar.gz', 'data.tar.gz']:

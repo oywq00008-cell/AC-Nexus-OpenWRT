@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """AC-Nexus-OpenWRT API — called by LuCI controller, arg is 'status' or 'send <params>'"""
-import sys, os, json
+import sys, os, json, time
 sys.path.insert(0, '/usr/lib/acnexus')
 
 def _iter_config_devices(cfg):
@@ -60,6 +60,7 @@ result = {}
 
 if cmd == "status" or cmd == "refresh":
     force = (cmd == "refresh")
+    from acnexus_core.config import save_config
 
     # config.json → UCI 反向同步（弹窗存的字段反向写 UCI，让 CBI 页面能显示）
     # 这样用户在弹窗里填的 API key 也能在 CBI 设置页看到
@@ -72,10 +73,10 @@ if cmd == "status" or cmd == "refresh":
             for _field in ('api_key', 'qw_host', 'baidu_key'):
                 _val = _cfg_for_uci.get(_field, '')
                 if _val:
-                    _r = _sp.run(['uci', 'get', f'acnexus.@acnexus[0].{_field}'],
+                    _r = _sp.run(['uci', 'get', f'acnexus.settings.{_field}'],
                                  capture_output=True, text=True)
                     if not _r.stdout.strip():
-                        _sp.run(['uci', 'set', f'acnexus.@acnexus[0].{_field}={_val}'])
+                        _sp.run(['uci', 'set', f'acnexus.settings.{_field}={_val}'])
             _sp.run(['uci', 'commit', 'acnexus'])
     except Exception:
         pass
@@ -85,9 +86,9 @@ if cmd == "status" or cmd == "refresh":
         import subprocess as _sp
         uci = {}
         for line in _sp.run(['uci', 'show', 'acnexus'], capture_output=True, text=True).stdout.splitlines():
-            if '=' in line and 'acnexus.@acnexus[0].' in line:
+            if '=' in line and ('acnexus.@acnexus[0].' in line or 'acnexus.settings.' in line):
                 k, v = line.split('=', 1)
-                key = k.split('acnexus.@acnexus[0].')[-1]
+                key = k.replace('acnexus.@acnexus[0].', '').replace('acnexus.settings.', '')
                 uci[key] = v.strip("'")
         cfg_path = "/root/.ac_controller/config.json"
         if os.path.exists(cfg_path) and uci:
@@ -116,14 +117,23 @@ if cmd == "status" or cmd == "refresh":
                     cfg[k] = v
                     changed = True
                 elif k == 'enabled':
+                    # enabled 直接信任 UCI 值：'1' → True，'0' 或缺失 → False
+                    # 注意：如果 UCI 中完全不存在 enabled（首次安装），此处不会进入，保持 config 原值
                     cfg['enabled'] = (v == '1')
                     changed = True
 
-            # enabled 特殊处理：CBI 取消勾选时 UCI 会直接删除该行（uhttpd 不写 enabled='0'），
-            # 所以这里要主动检查 UCI 中是否完全不存在 enabled 字段 → 视作 False
+            # enabled 特殊处理：CBI 取消勾选时 UCI 会直接删除该行（uhttpd 不写 enabled='0'）。
+            # UCI 从未配置过时 enabled 缺失应视为 True，仅当 config.json 已明确存为 False 才保持。
             if 'enabled' not in uci:
-                if cfg.get('enabled', True) is not False:
-                    cfg['enabled'] = False
+                if cfg.get('enabled') is True or 'enabled' not in cfg:
+                    pass  # 保持 True——UCI 未配置，不设 False
+                elif cfg.get('enabled') is False:
+                    pass  # 已在 config 中明确定为 False，保持
+
+            # 修复：如果 devices 内的 provider 被误写为数组，强制纠正
+            for p in ['broadlink', 'xiaomi_cloud']:
+                if not isinstance(cfg.get('devices', {}).get(p), dict):
+                    cfg['devices'][p] = {}
                     changed = True
 
             # device 节同步...
@@ -149,13 +159,14 @@ if cmd == "status" or cmd == "refresh":
         pass
 
     # 总开关短路：enabled=False 立即返回
+    # 注意：只有 config.json 中明确存为 False 才停用，缺失默认视为启用
     try:
         cfg_path_disabled = "/root/.ac_controller/config.json"
         _cfg_for_disabled = {}
         if os.path.exists(cfg_path_disabled):
             with open(cfg_path_disabled) as f:
                 _cfg_for_disabled = json.load(f)
-        if not _cfg_for_disabled.get("enabled", True):
+        if _cfg_for_disabled.get("enabled") is False:
             result = {"disabled": True, "online": False,
                       "device_name": "插件已停用", "state": {},
                       "weather": {}, "schedule": {"on": "--", "off": "--"},
@@ -206,13 +217,18 @@ if cmd == "status" or cmd == "refresh":
 
     # 在线检测
     if current_dev and current_dev.get("host"):
-        try:
-            import broadlink
-            d = broadlink.hello(current_dev["host"])
-            d.auth()
-            result["online"] = True
-        except:
-            pass
+        provider = cfg.get("current_brand_type", "broadlink")
+        if provider == "xiaomi_cloud":
+            # 小米设备：只要云 API 返回了有效 IP 就标记在线（穿透 NAT / 跨子网场景）
+            result["online"] = bool(current_dev.get("host"))
+        else:
+            try:
+                import broadlink
+                d = broadlink.hello(current_dev["host"])
+                d.auth()
+                result["online"] = True
+            except:
+                pass
 
     # 定时（从模板读取核心信息，不再使用已废弃的 trigger_time/off_time 字段）
     if current_dev:
@@ -265,79 +281,65 @@ if cmd == "status" or cmd == "refresh":
     except:
         pass
 
-    # 天气：force 时直接现场拉，否则缓存优先
+    # 天气：文件缓存（10 分钟有效），避免 MIPS 每次 HTTPS 请求卡 5 秒
     try:
         from acnexus_core import config as _cfg_mod
         _cfg_mod.apply_config()
+        weather_cache = "/tmp/acnexus_weather.json"
+        w = None
+
         if force:
-            # 强制拉一次
+            # 强制刷新
             from acnexus_core.weather import fetch_weather
             w = fetch_weather()
-            if w:
-                temp_val = float(w.get("temp", 0)) if w.get("temp") else None
-                if temp_val is not None:
-                    _cfg_mod._cached_temp = temp_val
-                result["weather"] = {"temp": str(w.get("temp", "--")),
-                                     "humidity": str(w.get("humidity", w.get("rh", "--"))),
-                                     "text": w.get("text", "--")}
-            else:
-                result["weather"] = {"temp": "--", "humidity": "--", "text": "--"}
+        elif os.path.exists(weather_cache):
+            try:
+                with open(weather_cache) as f:
+                    cached = json.load(f)
+                    if cached.get("ts", 0) > time.time() - 600:  # 10 分钟有效
+                        w = cached.get("data")
+            except:
+                pass
+
+        if w is None and not force:
+            # 缓存过期或不存在 → 拉新数据
+            from acnexus_core.weather import fetch_weather
+            w = fetch_weather()
+
+        if w:
+            try:
+                with open(weather_cache, "w") as f:
+                    json.dump({"ts": time.time(), "data": w}, f)
+            except:
+                pass
+            result["weather"] = {"temp": str(w.get("temp", "--")),
+                                 "humidity": str(w.get("humidity", w.get("rh", "--"))),
+                                 "text": w.get("text", "--")}
         else:
-            temp_val = _cfg_mod._cached_temp
-            if temp_val is None:
-                from acnexus_core.weather import fetch_weather
-                w = fetch_weather()
-                if w:
-                    temp_val = float(w.get("temp", 0)) if w.get("temp") else None
-                    if temp_val is not None:
-                        _cfg_mod._cached_temp = temp_val
-                    result["weather"] = {"temp": str(w.get("temp", "--")),
-                                         "humidity": str(w.get("humidity", w.get("rh", "--"))),
-                                         "text": w.get("text", "--")}
-                else:
-                    result["weather"] = {"temp": "--", "humidity": "--", "text": "--"}
-            else:
-                result["weather"] = {"temp": str(temp_val), "humidity": "--", "text": "--"}
+            result["weather"] = {"temp": "--", "humidity": "--", "text": "--"}
     except Exception as e:
         result["weather"] = {"temp": "--", "humidity": "--", "error": str(e)}
 
-    # 台风：force 时直接现场拉，否则缓存优先
+    # 台风：文件缓存（30 分钟有效），避免每次 HTTPS 请求卡 10 秒
     try:
-        from acnexus_core.typhoon import get_cached, typhoon_threat_distance
+        from acnexus_core.typhoon import get_cached, typhoon_threat_distance, has_recent_cache
         from acnexus_core import config as _cfg_mod
         _cfg_mod.apply_config()
         if force:
             from acnexus_core.typhoon import fetch_and_cache, judge_and_shutdown
             from acnexus_core.logger import write_log
             fetch_and_cache()
-            # force 时也跑一次判定（judge_and_shutdown 现在内部读日志，不再用 ty_ac_off_sent 标志位）
             judge_and_shutdown(write_log)
+        elif not has_recent_cache():
+            from acnexus_core.typhoon import fetch_and_cache
+            fetch_and_cache()
         else:
-            cache = get_cached()
-            if not cache:
-                from acnexus_core.typhoon import fetch_and_cache
-                fetch_and_cache()
+            get_cached()  # 加载文件缓存到内存
         dist, name = typhoon_threat_distance()
         result["storm_dist"] = dist
         result["storm_name"] = name
     except Exception:
         pass
-
-elif cmd.startswith("switch "):
-    mac = cmd[7:].strip()
-    try:
-        from acnexus_core.config import load_config, save_config
-        cfg = load_config()
-        provider, dev = _find_in_cfg_devices(cfg, mac)
-        if dev:
-            cfg["current_device_mac"] = mac
-            cfg["current_brand_type"] = provider
-            save_config(cfg)
-            result = {"ok": True}
-        else:
-            result = {"ok": False, "error": "设备不存在"}
-    except Exception as e:
-        result = {"ok": False, "error": str(e)}
 
 elif cmd.startswith("send "):
     parts = cmd[5:].split()
@@ -353,145 +355,32 @@ elif cmd.startswith("send "):
     else:
         result = {"ok": False, "error": "参数不足"}
 
-elif cmd.startswith("save_schedule "):
-    # base64 JSON: {"mac":"...","templates":{...},"active_template":"...","auto_adjust":bool,"rules":[...]}
-    import base64, subprocess as _sp
-    try:
-        data = json.loads(base64.b64decode(cmd[14:]).decode())
-        mac = data.get("mac") or cfg_get_mac()
-        from acnexus_core.config import load_config, save_config
-        cfg = load_config()
-        provider, dev = _find_in_cfg_devices(cfg, mac)
-        if not dev:
-            dev = cfg.setdefault("devices", {}).setdefault("broadlink", {}).setdefault(mac, {})
-        if "templates" in data:
-            cfg["schedule_templates"] = data["templates"]
-        if "active_template" in data:
-            dev["active_template"] = data["active_template"]
-        if "schedule_enabled" in data:
-            dev["schedule_enabled"] = bool(data["schedule_enabled"])
-        if "auto_adjust" in data:
-            dev["auto_adjust"] = bool(data["auto_adjust"])
-        save_config(cfg)
-        _uci_set_device(mac, dev)
-        try:
-            from acnexus_core.scheduler import re_register
-            re_register()
-        except Exception:
-            pass
-        result = {"ok": True}
-    except Exception as e:
-        result = {"ok": False, "error": str(e)}
-
-elif cmd.startswith("save_rules "):
-    import base64
-    try:
-        data = json.loads(base64.b64decode(cmd[11:]).decode())
-        mac = data.get("mac") or cfg_get_mac()
-        from acnexus_core.config import load_config, save_config
-        cfg = load_config()
-        provider, dev = _find_in_cfg_devices(cfg, mac)
-        if not dev:
-            dev = cfg.setdefault("devices", {}).setdefault("broadlink", {}).setdefault(mac, {})
-        dev["temp_rules"] = data.get("rules", [])
-        save_config(cfg)
-        _uci_set_device(mac, dev)
-        try:
-            from acnexus_core.scheduler import re_register
-            re_register()
-        except Exception:
-            pass
-        result = {"ok": True}
-    except Exception as e:
-        result = {"ok": False, "error": str(e)}
-
-elif cmd.startswith("save_device "):
-    import base64, subprocess as _sp
-    try:
-        data = json.loads(base64.b64decode(cmd[12:]).decode())
-        mac = data.get("mac") or cfg_get_mac()
-        if not mac:
-            result = {"ok": False, "error": "缺少设备 MAC"}
-        else:
-            from acnexus_core.config import load_config, save_config
-            cfg = load_config()
-            provider, dev = _find_in_cfg_devices(cfg, mac)
-            if not dev:
-                dev = cfg.setdefault("devices", {}).setdefault("broadlink", {}).setdefault(mac, {})
-            name_error = None
-            if "name" in data:
-                new_name = data["name"].strip()
-                if not new_name:
-                    name_error = "名称不能为空"
-                else:
-                    for _, odid, odev in _iter_config_devices(cfg):
-                        if odid != mac and odev.get("name") == new_name:
-                            name_error = f"名称「{new_name}」已被其他设备使用"
-                            break
-                    if not name_error:
-                        dev["name"] = new_name
-            if name_error:
-                result = {"ok": False, "error": name_error}
-            else:
-                if "brand" in data:
-                    dev["brand"] = data["brand"]
-                if "brand_display" in data:
-                    dev["brand_display"] = data["brand_display"]
-                save_config(cfg)
-                result = {"ok": True, "name": dev.get("name", ""), "brand": dev.get("brand", "")}
-                _uci_set_device(mac, dev)
-                result = {"ok": True}
-            # 设备字段变化后重注册 schedule（防止新增设备没 job）
-            try:
-                from acnexus_core.scheduler import re_register
-                re_register()
-            except Exception:
-                pass
-    except Exception as e:
-        result = {"ok": False, "error": str(e)}
-
-elif cmd.startswith("location_save "):
-    import base64, subprocess
-    try:
-        data = json.loads(base64.b64decode(cmd[14:]).decode())
-        from acnexus_core.config import load_config, save_config
-        cfg = load_config()
-        cfg["location"] = {"lat": data["lat"], "lon": data["lon"], "name": data["name"]}
-        save_config(cfg)
-        # Sync to UCI
-        subprocess.run(['uci', 'set', 'acnexus.@acnexus[0].location_lat=' + str(data["lat"])], capture_output=True)
-        subprocess.run(['uci', 'set', 'acnexus.@acnexus[0].location_lon=' + str(data["lon"])], capture_output=True)
-        subprocess.run(['uci', 'set', 'acnexus.@acnexus[0].location_name=' + data["name"]], capture_output=True)
-        subprocess.run(['uci', 'commit', 'acnexus'], capture_output=True)
-        subprocess.run(['rm', '-f', '/tmp/luci-indexcache*'], capture_output=True)
-        result = {"ok": True}
-    except Exception as e:
-        result = {"ok": False, "error": str(e)}
-
 elif cmd == "discover":
     result = {"ok": True, "devices": []}
     try:
         import broadlink, subprocess
 
-        # 1. 自动检测 LAN 接口 IP（优先 br-lan，回退任意 UP 非 lo 接口）
-        def get_lan_ip():
-            for ifname in ["br-lan", None]:
-                args = ["ip", "-4", "-br", "addr", "show"]
-                if ifname:
-                    args.append(ifname)
-                r = subprocess.run(args, capture_output=True, text=True)
-                for line in r.stdout.splitlines():
-                    if ifname is None and ("lo" in line or "UP" not in line):
-                        continue
-                    for part in line.split():
-                        if "/" in part:
-                            return part.split("/")[0]
-            raise Exception("找不到 LAN 接口")
+        # 自动检测所有可用接口 IP 并广播
+        r = subprocess.run(["ip", "-4", "-br", "addr", "show"], capture_output=True, text=True)
+        ips = []
+        for line in r.stdout.splitlines():
+            if "lo" in line or "UP" not in line:
+                continue
+            for part in line.split():
+                if "/" in part:
+                    ips.append(part.split("/")[0])
 
-        lan_ip = get_lan_ip()
-
-        # 2. 从 LAN 接口广播发现设备
-        devices = broadlink.discover(timeout=5, local_ip_address=lan_ip)
+        devices = []
+        seen = set()
+        for ip in ips:
+            try:
+                for d in broadlink.discover(timeout=3, local_ip_address=ip):
+                    mac = d.mac.hex() if hasattr(d.mac, "hex") else str(d.mac)
+                    if mac not in seen:
+                        seen.add(mac)
+                        devices.append(d)
+            except Exception:
+                pass
         for d in devices:
             mac = d.mac.hex() if hasattr(d.mac, "hex") else str(d.mac)
             result["devices"].append({
@@ -510,7 +399,9 @@ elif cmd == "discover":
                 from acnexus_core.config import load_config, save_config
                 cfg = load_config()
                 cfg.setdefault("devices", {})
-                cfg["devices"].setdefault("broadlink", {})
+                # 修复：如果 broadlink 被错误写成了数组 []，强行纠正为 {}
+                if not isinstance(cfg["devices"].get("broadlink"), dict):
+                    cfg["devices"]["broadlink"] = {}
                 for d in result["devices"]:
                     existing = cfg["devices"]["broadlink"].get(d["mac"], {})
                     model = d.get("model", "") or "博联设备"
@@ -526,9 +417,11 @@ elif cmd == "discover":
                     cfg["current_brand_type"] = "broadlink"
                 save_config(cfg)
                 result["saved"] = True
+            except Exception:
+                result["saved"] = False
 
-                # 4. 同步到 UCI（供 CBI 设置页读取）
-                # 先清理空条目（无 MAC 的设备节）
+            # 4. 同步到 UCI（供 CBI 设置页读取）—— 失败不影响主流程
+            try:
                 uci_show = subprocess.run(['uci', 'show', 'acnexus'], capture_output=True, text=True).stdout
                 has_mac = set()
                 for line in uci_show.splitlines():
@@ -541,7 +434,6 @@ elif cmd == "discover":
                             subprocess.run(['uci', 'delete', sec], capture_output=True)
                 subprocess.run(['uci', 'commit', 'acnexus'], capture_output=True)
 
-                # 写入/更新设备
                 for d in result["devices"]:
                     uci_show = subprocess.run(['uci', 'show', 'acnexus'], capture_output=True, text=True).stdout
                     section_name = None
@@ -559,7 +451,7 @@ elif cmd == "discover":
                 subprocess.run(['rm', '-f', '/tmp/luci-indexcache*'], capture_output=True)
                 result["uci_synced"] = True
             except Exception:
-                result["saved"] = False
+                result["uci_synced"] = False
 
             # 设备增删后重新注册 schedule 任务（仅在 init 之后才有 scheduler 线程）
             try:
@@ -612,6 +504,7 @@ elif cmd == "xiaomi_poll":
 elif cmd == "xiaomi_devices":
     try:
         from acnexus_core.xiaomi_cloud import xiaomi_fetch_devices
+        from acnexus_core.config import load_config
         r = xiaomi_fetch_devices()
         if "error" in r:
             result = r
@@ -631,6 +524,7 @@ elif cmd == "xiaomi_devices":
 elif cmd.startswith("xiaomi_add "):
     try:
         import base64
+        from acnexus_core.config import load_config, save_config
         data = json.loads(base64.b64decode(cmd[11:]).decode("utf-8"))
         cfg = load_config()
         cfg.setdefault("devices", {})
@@ -658,7 +552,7 @@ elif cmd.startswith("xiaomi_add "):
             cfg["devices"]["xiaomi_cloud"][did] = {
                 "did": did, "model": model,
                 "name": model, "token": d.get("token", ""),
-                "host": d.get("localip", ""), "port": 80,
+                "host": d.get("localip", ""), "port": 54321,
                 "brand": "xiaomi_cloud", "fan": "auto",
                 "schedule_enabled": True, "auto_adjust": True,
                 "temp_rules": None,
@@ -666,13 +560,14 @@ elif cmd.startswith("xiaomi_add "):
             }
             added.append(did)
         
-        # 去重命名
+        # 去重命名（仅与非小米设备比较，小米之间互不冲突）
         all_names = set()
-        for _, _, dev in _iter_config_devices(cfg):
-            all_names.add(dev.get("name", ""))
+        for provider, _, dev in _iter_config_devices(cfg):
+            if provider != "xiaomi_cloud":
+                all_names.add(dev.get("name", ""))
         for did in added:
             dev = cfg["devices"]["xiaomi_cloud"][did]
-            base_name = dev["model"]
+            base_name = dev.get("model", did[:8])
             name = base_name
             i = 2
             while name in all_names:
@@ -682,6 +577,7 @@ elif cmd.startswith("xiaomi_add "):
             all_names.add(name)
             if not cfg.get("current_device_mac"):
                 cfg["current_device_mac"] = did
+                cfg["current_brand_type"] = "xiaomi_cloud"
         
         save_config(cfg)
         result = {"ok": True, "added": added, "skipped": skipped}

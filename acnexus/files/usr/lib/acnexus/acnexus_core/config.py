@@ -134,6 +134,9 @@ def add_or_update_device(provider, device_id, info):
     """添加或更新设备。同名自动去重。返回 actual_name"""
     if "devices" not in config:
         config["devices"] = {"broadlink": {}, "xiaomi_cloud": {}}
+    # 修复：如果 provider 条目被误写为数组，强制纠正为 dict
+    if not isinstance(config["devices"].get(provider), dict):
+        config["devices"][provider] = {}
     config["devices"].setdefault(provider, {})
     provider_devs = config["devices"][provider]
 

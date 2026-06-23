@@ -9,12 +9,62 @@ try:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 except ImportError:
-    # OpenWRT MIPS / res-constrained: fall back to pure-Python pyaes
-    from pyaes import AESModeOfOperationCBC
-    from pyaes.util import append_PKCS7_padding, strip_PKCS7_padding
-    import hashlib
     default_backend = None
     Cipher = None
+
+# Always import pyaes as fallback (python3-light has no pycryptodome)
+from pyaes import AESModeOfOperationCBC
+from pyaes.util import append_PKCS7_padding, strip_PKCS7_padding
+
+# pyaes CBC wrapper that mimics pycryptodome CipherContext interface
+class _PyaesCBC:
+    def __init__(self, key, iv):
+        self._key = key
+        self._iv = iv
+
+    def encryptor(self):
+        return _PyaesCBCContext(self._key, self._iv, encrypt=True)
+
+    def decryptor(self):
+        return _PyaesCBCContext(self._key, self._iv, encrypt=False)
+
+class _PyaesCBCContext:
+    def __init__(self, key, iv, encrypt):
+        self._aes = AESModeOfOperationCBC(key, iv=iv)
+        self._encrypt = encrypt
+        self._buf = b''
+
+    def update(self, data):
+        self._buf += data
+        result = b''
+        while len(self._buf) >= 16:
+            block = self._buf[:16]
+            self._buf = self._buf[16:]
+            if self._encrypt:
+                result += self._aes.encrypt(block)
+            else:
+                result += self._aes.decrypt(block)
+        return result
+
+    def finalize(self):
+        if self._encrypt:
+            if len(self._buf) == 0:
+                return b''  # match pycryptodome: no padding when empty
+            pad = 16 - (len(self._buf) % 16)
+            self._buf += bytes([pad]) * pad
+            result = b''
+            for i in range(0, len(self._buf), 16):
+                result += self._aes.encrypt(self._buf[i:i+16])
+            return result
+        else:
+            result = b''
+            for i in range(0, len(self._buf), 16):
+                result += self._aes.decrypt(self._buf[i:i+16])
+            if result:
+                pad = result[-1]
+                if 1 <= pad <= 16:
+                    result = result[:-pad]
+            return result
 
 from . import exceptions as e
 from .const import (
@@ -169,21 +219,17 @@ class Device:
                 algorithms.AES(bytes(key)), modes.CBC(self.iv), backend=default_backend()
             )
         else:
-            self._aes_key = bytes(key)
+            self.aes = _PyaesCBC(bytes(key), self.iv)
 
     def encrypt(self, payload: bytes) -> bytes:
         """Encrypt the payload."""
-        if Cipher is not None:
-            encryptor = self.aes.encryptor()
-            return encryptor.update(bytes(payload)) + encryptor.finalize()
-        return AESModeOfOperationCBC(self._aes_key, iv=self.iv).encrypt(bytes(payload))
+        encryptor = self.aes.encryptor()
+        return encryptor.update(bytes(payload)) + encryptor.finalize()
 
     def decrypt(self, payload: bytes) -> bytes:
         """Decrypt the payload."""
-        if Cipher is not None:
-            decryptor = self.aes.decryptor()
-            return decryptor.update(bytes(payload)) + decryptor.finalize()
-        return AESModeOfOperationCBC(self._aes_key, iv=self.iv).decrypt(bytes(payload))
+        decryptor = self.aes.decryptor()
+        return decryptor.update(bytes(payload)) + decryptor.finalize()
 
     def auth(self) -> bool:
         """Authenticate to the device."""

@@ -4,10 +4,6 @@
 import binascii
 # import sys
 from . import ACProtocol
-import logging
-
-_LOGGER = logging.getLogger(__name__)
-
 
 class Gree(ACProtocol):
     HDR_MARK = 9000
@@ -173,7 +169,8 @@ class Gree(ACProtocol):
 
     def send_train(self, data):
         for c in data:
-            _LOGGER.debug("%02x" % c)
+            # _LOGGER.debug("%02x" % c) — logging module not available in python3-light
+            pass
         self.mark(self.HDR_MARK)
         self.space(self.HDR_SPACE)
         for i in range(4):
