@@ -9,7 +9,7 @@ import time
 import struct
 from typing import Optional, List, Tuple, Union
 
-from pyaes import AESModeOfOperationCBC
+from pyaes.aes import AESModeOfOperationCBC
 
 # ═══════════════ Constants ═══════════════
 DEFAULT_BCAST_ADDR = "255.255.255.255"
