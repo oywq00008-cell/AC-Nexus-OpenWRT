@@ -4,7 +4,7 @@ import socket
 from datetime import datetime
 
 import broadlink
-from broadlink.remote import pulses_to_data
+from broadlink import pulses_to_data
 
 import acnexus_core.config as _cfg
 from acnexus_core.logger import write_log

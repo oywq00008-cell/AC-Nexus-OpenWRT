@@ -116,7 +116,7 @@ def _process_cmd():
             f = fan_map.get(cmd["fan"], fan_map["auto"])
             sender.send(pwr, m, f, t)
 
-        from broadlink.remote import pulses_to_data
+        from broadlink import pulses_to_data
         data = pulses_to_data(sender.get_durations())
         d.send_data(data)
 
