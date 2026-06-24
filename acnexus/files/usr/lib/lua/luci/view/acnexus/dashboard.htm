@@ -513,11 +513,19 @@ function switchDevice(mac) {
   current.devMac = mac;
   api('switch ' + mac).then(function(d){
     if (d.ok) {
-      // 更新缓存并渲染（updateStatus 统一处理 devName/设备信息/在线状态）
+      // 更新缓存并渲染（updateStatus 统一处理 devName/设备信息/在线状态/定时摘要）
       statusData = statusData || {};
       statusData.device_name = d.device_name || mac;
       statusData.device_info = d.device_info || statusData.device_info || {};
       statusData.online = d.online;
+      if (d.schedule) {
+        // switch_dev 返回 active_template，updateStatus 读 template_name → 做一下映射
+        statusData.schedule = statusData.schedule || {};
+        statusData.schedule.enabled = d.schedule.enabled;
+        statusData.schedule.active_template = d.schedule.active_template || '';
+        statusData.schedule.auto_adjust = d.schedule.auto_adjust;
+        statusData.schedule.template_name = d.schedule.active_template || '--';
+      }
       updateStatus(statusData);
       document.getElementById('devSelect').value = mac;
     }
