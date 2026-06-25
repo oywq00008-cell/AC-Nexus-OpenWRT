@@ -2,7 +2,7 @@
 
 # AC-Nexus-OpenWRT
 
-> OpenWRT 路由器端全自动空调控制插件。支持博联 RM 红外遥控器和米家 MIoT 空调伴侣，自动获取天气数据，7×24小时无人值守管控空调。
+> 专为 OpenWRT 路由器重写的 AC-Nexus 版本，拥有原版全部重要功能并保持极致轻量化，专为低性能路由器重新设计代码！全自动空调控制插件。支持博联 RM 红外遥控器和所有可接入米家 MIoT 生态的智能红外遥控器，自动获取天气数据，智能判断风暴风速和距离关闭空调，7×24 小时无人值守管控空调，自动根据室外温度开关机、自动调温。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenWRT](https://img.shields.io/badge/OpenWRT-21%2B-blue.svg)]()

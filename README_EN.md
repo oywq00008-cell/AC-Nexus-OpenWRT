@@ -2,7 +2,7 @@
 
 # AC-Nexus-OpenWRT
 
-> OpenWRT router plugin for fully automatic air conditioning control via Broadlink RM and Xiaomi MIoT. Weather-aware, storm-protected, 24/7 unattended operation.
+> AC-Nexus rewritten specifically for OpenWRT routers — all major features preserved with extreme lightweight design, re-engineered for low-performance routers. Fully automatic AC control plugin. Supports Broadlink RM IR remotes and all Xiaomi MIoT ecosystem smart IR remotes. Auto weather fetching, intelligent storm wind-speed + distance shutdown, 24/7 unattended operation, automatic on/off and temperature adjustment based on outdoor conditions.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenWRT](https://img.shields.io/badge/OpenWRT-21%2B-blue.svg)]()
