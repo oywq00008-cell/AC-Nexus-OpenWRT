@@ -307,22 +307,23 @@ class Device:
         checksum = sum(packet, 0xBEAF) & 0xFFFF
         packet[0x20:0x22] = checksum.to_bytes(2, "little")
 
-        with self.lock and socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as conn:
-            timeout = self.timeout
-            start_time = time.time()
-            while True:
-                time_left = timeout - (time.time() - start_time)
-                conn.settimeout(min(DEFAULT_RETRY_INTVL, time_left))
-                conn.sendto(packet, self.host)
-                try:
-                    resp = conn.recvfrom(2048)[0]
-                    break
-                except socket.timeout as err:
-                    if (time.time() - start_time) > timeout:
-                        raise NetworkTimeoutError(
-                            -4000, "Network timeout",
-                            "No response received within %ss" % timeout,
-                        ) from err
+        with self.lock:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as conn:
+                timeout = self.timeout
+                start_time = time.time()
+                while True:
+                    time_left = timeout - (time.time() - start_time)
+                    conn.settimeout(min(DEFAULT_RETRY_INTVL, time_left))
+                    conn.sendto(packet, self.host)
+                    try:
+                        resp = conn.recvfrom(2048)[0]
+                        break
+                    except socket.timeout as err:
+                        if (time.time() - start_time) > timeout:
+                            raise NetworkTimeoutError(
+                                -4000, "Network timeout",
+                                "No response received within %ss" % timeout,
+                            ) from err
 
         if len(resp) < 0x30:
             raise DataValidationError(

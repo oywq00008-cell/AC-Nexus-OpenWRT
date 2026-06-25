@@ -1,8 +1,3 @@
-#import broadlink
-# import argparse
-# import time
-import binascii
-# import sys
 from . import ACProtocol
 
 class Gree(ACProtocol):

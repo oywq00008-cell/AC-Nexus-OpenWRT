@@ -22,7 +22,7 @@ for root, dirs, files in os.walk(dst):
             os.remove(os.path.join(root, f))
 for root, dirs, files in os.walk(dst):
     for f in files:
-        if any(f.endswith(ext) for ext in ('.py', '.sh', '.lua', '.htm', '.html', '.cgi', '.txt')):
+        if any(f.endswith(ext) for ext in ('.py', '.sh', '.lua', '.htm', '.html', '.txt')):
             path = os.path.join(root, f)
             with open(path, 'rb') as fh:
                 content = fh.read()
@@ -80,13 +80,13 @@ with tarfile.open('data.tar.gz', 'w:gz', format=tarfile.USTAR_FORMAT) as tf:
             info = tf.gettarinfo(path, arc)
             info.uid = info.gid = 0
             info.uname = info.gname = 'root'
-            if 'init.d' in arc or 'acnexus_service.py' in arc or arc.endswith('.sh') or arc.endswith('.cgi'):
+            if 'init.d' in arc or 'acnexus_service.py' in arc or arc.endswith('.sh'):
                 info.mode = 0o755
             with open(path, 'rb') as fh:
                 tf.addfile(info, fh)
 
 # Build gzip-tar IPK (compatible with OpenWRT 24.10)
-out = '../acnexus_openwrt_v5.0bt2_all.ipk'
+out = '../acnexus_openwrt_v5.0.0_all.ipk'
 with tarfile.open(out, 'w:gz', format=tarfile.USTAR_FORMAT) as tf:
     # Add as flat entries
     for name in ['debian-binary', 'control.tar.gz', 'data.tar.gz']:

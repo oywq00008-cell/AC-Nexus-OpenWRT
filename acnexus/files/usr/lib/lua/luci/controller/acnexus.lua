@@ -27,7 +27,14 @@ local function write_cfg(cfg)
     local tmp = CFG_PATH .. ".tmp"
     local f = io.open(tmp, "w")
     if not f then return false end
-    f:write(cjson.stringify(cfg, true))
+    local s = cjson.stringify(cfg, true)
+    -- 修复 Lua cjson 将空 table {} 序列化为 [] 的问题
+    -- 目标：将 devices 内空的 provider 和 schedule_templates 从 [] 恢复为 {}
+    for provider in pairs(devs) do
+        s = s:gsub('("' .. provider .. '"%s*:%s*)%[%]', '%1{}')
+    end
+    s = s:gsub('("schedule_templates"%s*:%s*)%[%]', '%1{}')
+    f:write(s)
     f:close()
     return os.rename(tmp, CFG_PATH)
 end
@@ -43,13 +50,30 @@ local function find_device(cfg, mac)
     return nil, nil
 end
 
--- base64 解码（通过 shell，适用小数据）
+-- 纯 Lua base64 解码（不走 shell，MIPS 每次省 3 次 fork）
+local b64_idx = {}
+do
+    local t = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    for i = 1, #t do b64_idx[t:sub(i,i)] = i - 1 end
+end
+
 local function b64decode(s)
-    local f = io.popen("echo '" .. s .. "' | base64 -d 2>/dev/null", "r")
-    if not f then return nil end
-    local r = f:read("*all")
-    f:close()
-    return r
+    s = s:gsub('[^A-Za-z0-9+/=]', '')
+    local out, j = {}, 1
+    for i = 1, #s, 4 do
+        local a = b64_idx[s:sub(i, i)] or 0
+        local b = b64_idx[s:sub(i+1, i+1)] or 0
+        local c = b64_idx[s:sub(i+2, i+2)] or 0
+        local d = b64_idx[s:sub(i+3, i+3)] or 0
+        out[j] = string.char(a * 4 + math.floor(b / 16)); j = j + 1
+        if s:sub(i+2, i+2) ~= '=' then
+            out[j] = string.char((b % 16) * 16 + math.floor(c / 4)); j = j + 1
+        end
+        if s:sub(i+3, i+3) ~= '=' then
+            out[j] = string.char((c % 4) * 64 + d); j = j + 1
+        end
+    end
+    return table.concat(out)
 end
 
 -- 写 UCI 并提交（安全转义单引号）
@@ -65,7 +89,7 @@ end
 function index()
     entry({"admin", "services", "acnexus"},
         alias("admin", "services", "acnexus", "dashboard"),
-        _("AC-Nexus 空调控制"), 60).dependent = true
+        _("AC-Nexus"), 60).dependent = true
 
     entry({"admin", "services", "acnexus", "dashboard"},
         template("acnexus/dashboard"), _("控制面板"), 10)
@@ -95,6 +119,7 @@ function api()
     -- ═══════════ Lua 直接处理 ═══════════
 
     if cmd == "status_lite" then return status_lite() end
+    if cmd == "log_dates" then return log_dates() end
     if string.match(cmd, "^switch ") then return switch_dev(string.sub(cmd, 8)) end
     if cmd == "set_location_quick" then return set_location_quick() end
     if string.match(cmd, "^save_name ") then return save_name(string.sub(cmd, 11)) end
@@ -121,51 +146,44 @@ function api()
 end
 
 -- ─── status_lite ───────────────────────────────────────────────
+-- 纯只读：读 config.json + 天气/台风缓存，拼成 JSON 返回。
+-- 不写文件、不重启 daemon、不同步 UCI——写入统一由 CBI on_commit 负责。
 function status_lite()
-    -- UCI → config.json 同步（CBI 设置页填的值需要同步过来）
     local cfg = read_cfg()
-    if cfg then
-        local changed = false
-        local function uci_get(key, default)
-            local f = io.popen("uci -q get acnexus.settings." .. key .. " 2>/dev/null")
-            if not f then return nil end
-            local v = f:read("*line"); f:close()
-            return v ~= "" and v or default
+    -- 插件停用检测：UCI 为权威来源，config.json 仅作降级补充
+    local p_en = io.popen("uci -q get acnexus.@acnexus[0].enabled 2>/dev/null || uci -q get acnexus.settings.enabled 2>/dev/null")
+    local uci_enabled = p_en and p_en:read("*a"):gsub("%s+", "") or ""
+    if p_en then p_en:close() end
+    if uci_enabled == "1" then
+        -- UCI 明确启用 → 无条件放行（不信任可能过期的 config.json）
+    elseif uci_enabled == "0" then
+        -- UCI 明确禁用
+        luci.http.prepare_content("application/json")
+        luci.http.write(cjson.stringify({disabled = true, devices = {}, weather = {}, location = cfg.location or {}}))
+        return
+    else
+        -- UCI 缺失 enabled 行（Flag 已删除），回退到 config.json + daemon 检测
+        if cfg and cfg.enabled == false then
+            luci.http.prepare_content("application/json")
+            luci.http.write(cjson.stringify({disabled = true, devices = {}, weather = {}, location = cfg.location or {}}))
+            return
         end
-        local function set_if_present(cfg_key, uci_key)
-            local v = uci_get(uci_key)
-            if v then
-                if uci_key == "enabled" or uci_key == "weather_provider_set" or uci_key == "typhoon_ac_off" then
-                    v = (v == "1" or v == "true")
-                end
-                if cfg[cfg_key] ~= v then cfg[cfg_key] = v; changed = true end
-            end
+        local p = io.popen("ps | grep [a]cnexus_service | wc -l 2>/dev/null")
+        local raw = p and p:read("*a") or "0"
+        if p then p:close() end
+        local count = tonumber((raw:match("%d+") or "0")) or 0
+        if count == 0 then
+            luci.http.prepare_content("application/json")
+            luci.http.write(cjson.stringify({disabled = true, devices = {}, weather = {}, location = cfg.location or {}}))
+            return
         end
-        set_if_present("api_key", "api_key")
-        set_if_present("qw_host", "qw_host")
-        set_if_present("weather_provider", "weather_provider")
-        set_if_present("weather_provider_set", "weather_provider_set")
-        set_if_present("baidu_key", "baidu_key")
-        set_if_present("typhoon_provider", "typhoon_provider")
-        set_if_present("typhoon_ac_off", "typhoon_ac_off")
-        set_if_present("appearance_mode", "appearance_mode")
-        set_if_present("enabled", "enabled")
-        -- 位置同步
-        local lat = uci_get("location_lat")
-        local lon = uci_get("location_lon")
-        local name = uci_get("location_name")
-        if lat and lon then
-            cfg.location = { lat = tonumber(lat) or 39.9, lon = tonumber(lon) or 116.4, name = name or "未设置" }
-            changed = true
-        end
-        if changed then write_cfg(cfg) end
     end
 
     local result = { devices = {}, weather = { temp = "--", humidity = "--", text = "--" },
                      storm_dist = 99999, storm_name = "", online = false }
 
-    cfg = read_cfg()  -- 重新读取已同步的配置
     if cfg then
+        -- 设备列表 + 当前设备
         local devs = cfg.devices or {}
         for provider, provider_devs in pairs(devs) do
             if type(provider_devs) == "table" then
@@ -194,13 +212,9 @@ function status_lite()
         result.location = cfg.location or { lat = 39.9, lon = 116.4, name = "未设置" }
     end
 
-    -- 天气缓存：如果缺失但 API key 已配 → 重启后台服务触发立即拉取
+    -- 天气缓存
     local wf = io.open("/tmp/acnexus_weather.json", "r")
-    if not wf then
-        if cfg and ((cfg.api_key and cfg.api_key ~= "") or (cfg.qw_host and cfg.qw_host ~= "") or (cfg.baidu_key and cfg.baidu_key ~= "")) then
-            os.execute("/etc/init.d/acnexus restart 2>/dev/null &")
-        end
-    else
+    if wf then
         local wraw = wf:read("*all"); wf:close()
         local wok, wd = pcall(cjson.parse, wraw)
         if wok and wd and wd.data then
@@ -212,7 +226,7 @@ function status_lite()
         end
     end
 
-    -- 台风缓存
+    -- 台风：从完整缓存计算最近风暴（可靠简单，一个文件无竞态）
     local tf = io.open("/tmp/acnexus_typhoon.json", "r")
     if tf then
         local traw = tf:read("*all"); tf:close()
@@ -227,7 +241,9 @@ function status_lite()
                         local dlat = tonumber(t.detail.lat) - lat
                         local dlon = tonumber(t.detail.lon) - lon
                         local dist = math.sqrt(dlat*dlat + dlon*dlon) * 111
-                        if dist < min_dist then min_dist = dist; close_name = t.cn or t.eng or "" end
+                        if dist < min_dist then
+                            min_dist = dist; close_name = t.cn or t.eng or ""
+                        end
                     end
                 end
             end
@@ -257,7 +273,7 @@ function switch_dev(mac)
         ok = true,
         device_name = dev.name or dev.model or mac,
         device_info = { brand = dev.brand or "gree", brand_display = dev.brand_display or "", host = dev.host or "", port = dev.port or 80, mac = mac },
-        schedule = { enabled = dev.schedule_enabled, active_template = dev.active_template or "", auto_adjust = dev.auto_adjust },
+        schedule = { enabled = (dev.schedule_enabled ~= nil and dev.schedule_enabled) or false, active_template = dev.active_template or "", auto_adjust = (dev.auto_adjust ~= nil and dev.auto_adjust) or false, rules = dev.temp_rules or {} },
         online = (dev.host ~= nil and dev.host ~= ""),
     }))
 end
@@ -340,7 +356,7 @@ function save_device(cmd)
         cfg.devices = cfg.devices or {}
         cfg.devices.broadlink = cfg.devices.broadlink or {}
         dev = { mac = mac, model = "博联设备", host = data.host or "", port = data.port or 80,
-                brand = "gree", schedule_enabled = true, auto_adjust = true }
+                brand = "gree", schedule_enabled = false, auto_adjust = false }
         cfg.devices.broadlink[mac] = dev
         if not cfg.current_device_mac or cfg.current_device_mac == "" then
             cfg.current_device_mac = mac
@@ -454,6 +470,23 @@ function save_rules(cmd)
         write_cfg(cfg)
     end
     luci.http.write(cjson.stringify({ok = true}))
+end
+
+-- 列出所有有日志的日期（纯 Lua，不走 Python 冷启动）
+function log_dates()
+    local dir = "/root/.ac_controller/logs"
+    local dates = {}
+    local p = io.popen("ls -1tr " .. dir .. "/*.md 2>/dev/null | sed 's|.*/||; s|\\.md$||'")
+    if p then
+        for line in p:lines() do
+            if line ~= "" then
+                table.insert(dates, 1, line)  -- ls -1tr 是时间升序，前端要降序
+            end
+        end
+        p:close()
+    end
+    luci.http.prepare_content("application/json")
+    luci.http.write(cjson.stringify({ok = true, dates = dates}))
 end
 
 function log_download()

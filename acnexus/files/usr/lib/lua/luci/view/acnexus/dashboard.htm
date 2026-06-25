@@ -12,19 +12,19 @@
 .ac-dot-online{background:#2ecc71;box-shadow:0 0 8px #2ecc71}
 .ac-dot-offline{background:#e74c3c}
 .ac-status-text{font-size:12px;color:var(--cbi-text-secondary,#666)}
-.ac-power-btn{width:72px;height:72px;border-radius:50%;border:1px solid var(--border,#ddd);font-size:28px;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;margin:8px auto;color:var(--cbi-text-secondary,#999);background:#fff}
+.ac-power-btn{width:72px;height:72px;border-radius:50%;border:1px solid var(--border,#ddd);font-size:28px;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;margin:8px auto;color:var(--cbi-text-secondary,#999);background:#fff;transform:translateY(-4px)}
 .ac-power-btn{line-height:1;padding:0}
 .ac-power-btn:active{background:#e94560;color:#fff;border-color:#e94560;transform:scale(.92)}
-.ac-power-toggle{flex:1;padding:6px 4px;border:1px solid #e94560;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;background:var(--cbi-background,#f5f5f5);color:#e94560}
+.ac-power-toggle{flex:1;display:flex;align-items:center;justify-content:center;padding:8px 4px;border:1px solid #e94560;border-radius:6px;font-size:12px;cursor:pointer;transition:background .15s,border-color .15s;background:var(--cbi-background,#f5f5f5);color:#e94560;min-height:52px}
 .ac-power-toggle.on{background:#e94560;color:#fff;font-weight:600}
 .ac-power-toggle:active{transform:scale(.96)}
 .ac-mode-row{display:flex;gap:6px;justify-content:center}
-.ac-mode-btn{flex:1;padding:6px 4px;border:1px solid var(--border,#ddd);border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text-secondary,#666)}
+.ac-mode-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;border:1px solid var(--border,#ddd);border-radius:6px;font-size:12px;cursor:pointer;transition:background .15s,border-color .15s;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text-secondary,#666);min-height:52px;gap:2px}
 .ac-mode-btn.active[data-mode="cool"]{background:#3498db;color:#333;border-color:#3498db;font-weight:600}
 .ac-mode-btn.active[data-mode="heat"]{background:#e67e22;color:#333;border-color:#e67e22;font-weight:600}
 .ac-mode-btn.active[data-mode="dry"]{background:#95a5a6;color:#333;border-color:#95a5a6;font-weight:600}
 .ac-mode-btn.active[data-mode="fan"]{background:#27ae60;color:#333;border-color:#27ae60;font-weight:600}
-.ac-mode-icon{font-size:18px;display:block;margin-bottom:4px}
+.ac-mode-icon{font-size:18px}
 .ac-temp-display{text-align:center;margin:24px 0 16px 0}
 .ac-temp-num{font-size:56px;font-weight:300;line-height:1;color:var(--cbi-text,#333)}
 .ac-temp-unit{font-size:16px;color:var(--cbi-text-secondary,#666)}
@@ -37,7 +37,7 @@
 .ac-info-row{display:flex;justify-content:space-around;text-align:center;margin-top:8px}
 .ac-info-val{font-size:22px;font-weight:600;color:var(--cbi-text,#333)}
 .ac-info-label{font-size:11px;color:var(--cbi-text-secondary,#666)}
-.ac-last-action{font-size:11px;color:var(--cbi-text-secondary,#666);text-align:center;margin-top:8px}
+.ac-last-action{font-size:12px;color:var(--cbi-text-secondary,#666);text-align:center;margin-top:6px;min-height:18px;line-height:18px}
 .ac-alert-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;margin-top:8px;font-size:13px}
 .ac-alert-safe{background:rgba(46,204,113,.1);color:#2ecc71}
 .ac-alert-warn{background:rgba(230,126,34,.1);color:#e67e22}
@@ -47,17 +47,21 @@
 .ac-discover-item{padding:8px 10px;border:1px solid var(--border,#ddd);border-radius:6px;margin-bottom:6px;cursor:pointer;transition:all .2s;display:flex;justify-content:space-between;align-items:center;font-size:12px}
 .ac-discover-item:hover{background:var(--cbi-background-hover,#e8e8e8)}
 .ac-discover-mac{font-family:monospace;color:var(--cbi-text-secondary,#666);font-size:11px}
-.ac-toolbar-btn{background:var(--cbi-background,#f0f0f0);color:var(--cbi-text,#333);border:1px solid var(--border,#ddd);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:13px;line-height:1;min-width:36px;text-align:center}
+.ac-toolbar-btn{background:var(--cbi-background,#f0f0f0);color:var(--cbi-text,#333);border:1px solid var(--border,#ddd);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:13px;line-height:1;text-align:center}
+.ac-icon-btn{background:var(--cbi-background,#f0f0f0);color:var(--cbi-text,#333);border:1px solid var(--border,#ddd);border-radius:6px;padding:0;cursor:pointer;font-size:13px;line-height:1;width:38px;height:30px;display:inline-flex;align-items:center;justify-content:center}
 .ac-toolbar-btn:hover{background:var(--cbi-background-hover,#e0e0e0)}
+.ac-icon-btn:hover{background:var(--cbi-background-hover,#e0e0e0)}
 .ac-sched-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border,#eee);font-size:13px;color:var(--cbi-text,#333)}
 /* 弹窗 */
-.ac-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}
+.ac-overlay{display:none;position:fixed;top:0;left:200px;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}
 .ac-overlay.show{display:flex}
 .ac-modal{background:var(--cbi-background,#f5f5f5);border-radius:10px;padding:20px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.3)}
 .ac-modal-title{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;color:var(--cbi-text,#333)}
 .ac-modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--cbi-text-secondary,#666)}
 .ac-field{margin-bottom:12px}
 .ac-field-label{font-size:12px;color:var(--cbi-text-secondary,#666);margin-bottom:4px}
+.ac-help-tip{display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:var(--border,#ccc);color:var(--cbi-text-secondary,#999);font-size:11px;cursor:help;margin-left:3px;font-weight:600}
+#locSearch::placeholder{color:#888}
 .ac-field input[type=text],.ac-field input[type=number],.ac-field select{width:100%;padding:6px 8px;border:1px solid var(--border,#ddd);border-radius:5px;font-size:13px;background:var(--cbi-background,#fff);color:var(--cbi-text,#333);box-sizing:border-box}
 .ac-field-row{display:flex;gap:8px;align-items:center}
 .ac-field-row input[type=number]{width:60px}
@@ -66,7 +70,7 @@
 .ac-save-btn{width:100%;padding:10px;background:#e94560;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
 .ac-save-btn:active{opacity:.85}
 .ac-rule-row{display:flex;gap:4px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
-.ac-rule-row input{width:52px!important;text-align:center}
+.ac-rule-row input{width:52px!important;text-align:center;-moz-appearance:textfield}.ac-rule-row input::-webkit-outer-spin-button,.ac-rule-row input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .ac-rule-row select{width:auto!important;flex:1}
 .ac-rule-del{background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px;padding:0 4px}
 .ac-add-btn{background:none;border:1px dashed var(--border,#ccc);border-radius:5px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--cbi-text-secondary,#666);width:100%}
@@ -80,7 +84,7 @@
 .ac-log-date.has-log:hover{background:#e94560;color:#fff}
 .ac-log-date.selected{background:#e94560;color:#fff;border-color:#e94560}
 /* 帮助按钮 */
-.ac-help-btn{position:fixed;bottom:16px;right:16px;width:40px;height:40px;border-radius:50%;background:var(--cbi-background,#f5f5f5);border:1px solid var(--border,#ddd);font-size:20px;cursor:pointer;z-index:900;display:flex;align-items:center;justify-content:center;color:var(--cbi-text-secondary,#666);box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .2s}
+.ac-help-btn{position:fixed;bottom:36px;right:16px;width:40px;height:40px;border-radius:50%;background:var(--cbi-background,#f5f5f5);border:1px solid var(--border,#ddd);font-size:20px;cursor:pointer;z-index:900;display:flex;align-items:center;justify-content:center;color:var(--cbi-text-secondary,#666);box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .2s}
 .ac-help-btn:hover{background:#e94560;color:#fff;border-color:#e94560}
 .ac-help-link{color:#e94560;text-decoration:underline;cursor:pointer;font-size:13px}
 /* 模板样式 */
@@ -91,26 +95,27 @@
 .ac-day-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border,#ddd);font-size:10px;cursor:pointer;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text-secondary,#999);transition:all .15s;padding:0;display:flex;align-items:center;justify-content:center}
 .ac-day-btn.on{background:#e94560;color:#fff;border-color:#e94560;font-weight:600}
 .ac-slot-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:4px 0}
-.ac-slot-row input[type=text]{width:64px;text-align:center;padding:4px 6px;font-size:12px}
+.ac-slot-row input[type=text]{width:56px;text-align:center;padding:4px 2px;font-size:12px}
 .ac-slot-label{font-size:11px;color:var(--cbi-text-secondary,#666);min-width:20px}
-.ac-slot-del{background:none;border:none;color:#e74c3c;cursor:pointer;font-size:14px;padding:0 2px}
+.ac-slot-del{background:none;border:none;color:#e74c3c;cursor:pointer;font-size:20px;padding:0 4px}
 .ac-group-card{border:1px solid var(--border,#ddd);border-radius:6px;padding:10px;margin-bottom:8px}
 .ac-group-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .ac-group-header span{font-size:11px;color:var(--cbi-text-secondary,#666)}
 </style>
 
 <div class="ac-container">
+<div style="text-align:center;font-size:30px;color:var(--cbi-text-secondary,#999);margin-bottom:8px;letter-spacing:1px">AC-Nexus-OpenWRT</div>
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
   <select id="devSelect" onchange="switchDevice(this.value)" style="font-size:11px;padding:2px 6px;border:1px solid var(--border,#ddd);border-radius:4px;background:var(--cbi-background,#f5f5f5);color:var(--cbi-text,#333);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><option value="">--</option></select>
   <span style="display:flex;gap:4px;align-items:center">
     <span style="font-size:11px;color:var(--cbi-text-secondary)" id="refreshInfo"></span>
-    <button class="ac-toolbar-btn" onclick="openModal('schedule')" title="定时 & 调温" style="font-size:16px">&#x23F0;</button>
-    <button class="ac-toolbar-btn" onclick="openModal('rules')" title="温度规则" style="font-size:16px">&#x1F321;</button>
-    <button class="ac-toolbar-btn" onclick="openModal('device')" title="设备设置" style="font-size:16px">&#x1F527;</button>
-    <button class="ac-toolbar-btn" onclick="openModal('log')" title="下载日志" style="font-size:16px">&#x1F4CB;</button>
-    <button class="ac-toolbar-btn" onclick="discoverDevices()" title="扫描博联设备" style="font-size:16px">&#x1F50D;</button>
-    <button class="ac-toolbar-btn" onclick="openXiaomiModal()" title="添加米家设备" style="font-size:16px;color:#e94560">+</button>
-    <button class="ac-toolbar-btn" onclick="loadAll(true)" title="刷新全部数据" style="font-size:16px">&#x21BB;</button>
+    <button class="ac-icon-btn" onclick="discoverDevices()" title="扫描博联设备" style="font-size:16px">&#x1F50D;</button>
+    <button class="ac-icon-btn" onclick="openXiaomiModal()" title="添加米家设备" style="font-size:16px;color:#e94560"><span style="font-size:18px;line-height:1">+</span></button>
+    <button class="ac-icon-btn" onclick="openModal('device')" title="设备设置" style="font-size:16px">&#x1F527;</button>
+    <button class="ac-icon-btn" onclick="openModal('schedule')" title="定时 & 调温" style="font-size:16px">&#x23F0;</button>
+    <button class="ac-icon-btn" onclick="openModal('rules')" title="温度规则" style="font-size:16px"><span style="font-size:17px;line-height:1">&#x1F321;</span></button>
+    <button class="ac-icon-btn" onclick="openModal('log')" title="下载日志" style="font-size:16px">&#x1F4CB;</button>
+    <button class="ac-icon-btn" id="autoRefreshBtn" onclick="toggleAutoRefresh()" title="停止持续刷新" style="font-size:16px;color:#3498db">&#x21BB;</button>
   </span>
 </div>
 
@@ -123,7 +128,8 @@
     </div>
     <div><span class="ac-status-dot ac-dot-offline" id="statusDot"></span></div>
   </div>
-  <button class="ac-power-btn" id="sendBtn" onclick="doSend()"><svg xmlns="http://www.w3.org/2000/svg" height="30" viewBox="0 -960 960 960" width="30" fill="currentColor" style="transform:rotate(-45deg) translate(5px,-1px)"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg></button>
+  <button class="ac-power-btn" id="sendBtn" onclick="doSend()"><svg xmlns="http://www.w3.org/2000/svg" height="34" viewBox="0 -960 960 960" width="34" fill="currentColor" style="transform:rotate(-45deg) translate(5px,-1px)"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg></button>
+  <div class="ac-last-action" id="lastAction"> </div>
 
   <div class="ac-mode-row">
     <button class="ac-power-toggle" id="powerToggleBtn" onclick="togglePower()">电源关</button>
@@ -147,7 +153,6 @@
     <button class="ac-fan-btn" data-fan="high" onclick="setFan('high')">高</button>
   </div>
 
-  <div class="ac-last-action" id="lastAction"></div>
   <div class="ac-discover-list" id="discoverList" style="display:none"></div>
 </div>
 
@@ -173,7 +178,7 @@
 <!-- ⏰ 定时模板弹窗 -->
 <div class="ac-overlay" id="modal-schedule">
   <div class="ac-modal">
-    <div class="ac-modal-title">&#x23F0; 定时模板 (<span id="schedDevName">--</span>) <button class="ac-modal-close" onclick="closeModal('schedule')">&times;</button></div>
+    <div class="ac-modal-title">&#x23F0; 定时和自动调温 (<span id="schedDevName">--</span>) <button class="ac-modal-close" onclick="closeModal('schedule')">&times;</button></div>
 
     <!-- 总开关 -->
     <div class="ac-switch" style="margin-bottom:12px">
@@ -184,11 +189,11 @@
     <div id="tmplArea">
     <!-- 模板选择 -->
     <div class="ac-field">
-      <div class="ac-field-label">模板</div>
+      <div class="ac-field-label">模板 <span class="ac-help-tip" title="可创建多个模板(如夏季/冬季), 每个模板配置不同的定时开关机方案, 切换设备时选择对应模板即可">?</span></div>
       <div class="ac-tmpl-row">
         <select id="tmplSelect" onchange="onTmplChange()"></select>
-        <button class="ac-toolbar-btn" onclick="addTemplate()" title="新增模板">+</button>
-        <button class="ac-toolbar-btn" onclick="delTemplate()" title="删除模板" style="color:#e74c3c">&times;</button>
+        <button class="ac-toolbar-btn" onclick="addTemplate()" title="新增模板" style="font-size:18px;padding:2px 8px">+</button>
+        <button class="ac-toolbar-btn" onclick="delTemplate()" title="删除模板" style="color:#e74c3c;font-size:20px;padding:2px 6px">&times;</button>
       </div>
     </div>
 
@@ -197,7 +202,7 @@
     </div><!-- /tmplArea -->
 
     <!-- 自动调温 -->
-    <div class="ac-switch"><span>自动调温</span><input type="checkbox" id="autoAdjust" onchange="toggleAutoAdj()"></div>
+    <div class="ac-switch"><span>自动调温 <span class="ac-help-tip" title="开启后每隔2小时读取室外温度，根据温度规则自动调整设定温度和模式">?</span></span><input type="checkbox" id="autoAdjust" onchange="toggleAutoAdj()"></div>
     <button class="ac-save-btn" onclick="saveSchedule()">&#x1F4BE; 保存设置</button>
   </div>
 </div>
@@ -206,7 +211,7 @@
 <div class="ac-overlay" id="modal-rules">
   <div class="ac-modal">
     <div class="ac-modal-title">&#x1F321; 温度规则 (<span id="rulesDevName">--</span>) <button class="ac-modal-close" onclick="closeModal('rules')">&times;</button></div>
-    <div class="ac-field-label">室外温度 → 目标温度 + 模式（定时 & 调温共用）</div>
+    <div class="ac-field-label">温度规则 <span class="ac-help-tip" title="当室外温度在[最低,最高]区间内时，自动将空调设为目标温度+模式。多条规则按顺序匹配第一条，未匹配到则使用默认26°C制冷。这些规则同时用于自动调温(每2小时)和定时开关机后的温度生效">?</span></div>
     <div id="rulesList"></div>
     <button class="ac-add-btn" onclick="addRule()">+ 添加规则</button>
     <button class="ac-save-btn" onclick="saveRules()">&#x1F4BE; 保存规则</button>
@@ -219,12 +224,12 @@
     <div class="ac-modal-title">&#x2699; 设备设置 (<span id="devSetName">--</span>) <button class="ac-modal-close" onclick="closeModal('device')">&times;</button></div>
     <div class="ac-field">
       <div class="ac-field-label">&#x1F4CD; 位置（用于天气和台风数据）</div>
-      <div class="ac-field-row"><input type="text" id="locSearch" placeholder="搜索城市名称..." style="flex:1"><button class="ac-toolbar-btn" onclick="searchLocation()" style="padding:5px 10px">&#x1F50D;</button></div>
+      <div class="ac-field-row"><input type="text" id="locSearch" placeholder="搜索城市名称..." style="flex:1;color:#222;background:#fff;border:1px solid var(--border,#ddd);border-radius:5px;padding:6px 8px;font-size:13px;box-sizing:border-box"><button class="ac-toolbar-btn" onclick="searchLocation()" style="padding:5px 10px">&#x1F50D;</button></div>
       <div class="ac-search-results" id="searchResults" style="display:none"></div>
       <div style="font-size:11px;color:var(--cbi-text-secondary);margin-top:4px">当前：<span id="locCurrent">--</span></div>
     </div>
     <div class="ac-field">
-      <div class="ac-field-label">&#x2744; 空调品牌</div>
+      <div class="ac-field-label">&#x1F4E1; 更改遥控器</div>
       <select id="devBrand"></select>
     </div>
     <div class="ac-field" style="font-size:11px;color:var(--cbi-text-secondary)">
@@ -254,13 +259,15 @@
   <div class="ac-modal">
     <div class="ac-modal-title">&#x2753; 关于插件 <button class="ac-modal-close" onclick="closeModal('help')">&times;</button></div>
     <div style="font-size:13px;line-height:1.8;color:var(--cbi-text,#333)">
-      <p><strong>AC-Nexus-OpenWRT</strong> — 基于 OpenWRT 的全自动空调控制插件。</p>
-      <p>&#x2705; 支持 17 大品牌空调<br>
-         &#x2705; 和风 + 百度双天气源<br>
-         &#x2705; 台风自动保护<br>
-         &#x2705; 多日期组定时模板<br>
-         &#x2705; 自动调温规则引擎<br>
-         &#x2705; 红外扫描 + Web 控制面板</p>
+      <p><strong>AC-Nexus-OpenWRT</strong><br>基于 OpenWRT 的全自动空调控制插件，Lua + Python 双引擎驱动。</p>
+      <p>&#x2705; 博联 RM 系列 + 米家空调伴侣<br>
+         &#x2705; 14 种红外协议 / 16 品牌空调<br>
+         &#x2705; 百度 + 和风双天气源，自适应回退<br>
+         &#x2705; 台风自动保护（三级风速判定）<br>
+         &#x2705; 多日期组定时模板（每日多段）<br>
+         &#x2705; 温度规则引擎（定时 & 调温共用）<br>
+         &#x2705; 命令队列异步发送，前端零阻塞<br>
+         &#x2705; Lua 接管高频 API，冷启动毫秒级</p>
       <p><span class="ac-help-link" onclick="downloadGuide()">&#x1F4D6; 详细使用文档请点击这里</span></p>
       <p style="color:var(--cbi-text-secondary,#666);font-size:11px;margin-top:12px">by 欧阳小白</p>
       <p style="font-size:11px;margin-top:4px"><a href="https://github.com/oywq00008-cell/AC-Nexus-OpenWRT" target="_blank" style="color:var(--cbi-text-secondary,#999)">github.com/oywq00008-cell/AC-Nexus-OpenWRT</a></p>
@@ -271,14 +278,11 @@
 <!-- 米家设备添加弹窗 -->
 <div class="ac-overlay" id="modal-xiaomi">
   <div class="ac-modal">
-    <div class="ac-modal-title">小米设备 <button class="ac-modal-close" onclick="closeModal('xiaomi')">&times;</button></div>
+    <div class="ac-modal-title">米家MIoT设备 <button class="ac-modal-close" onclick="closeModal('xiaomi')">&times;</button></div>
     <div id="xiaomiContent" style="font-size:13px;color:var(--cbi-text,#333)">
       <p id="xiaomiMsg" style="margin-bottom:12px;text-align:center">点击下方按钮生成二维码</p>
       <div style="text-align:center;margin:8px 0">
         <img id="xiaomiQR" src="" style="display:none;max-width:200px;border:1px solid var(--border,#ddd);border-radius:8px">
-      </div>
-      <div style="text-align:center;margin:8px 0">
-        <a id="xiaomiLoginLink" href="#" target="_blank" style="display:none;font-size:11px;color:var(--cbi-link,#3498db);word-break:break-all">或点击此链接</a>
       </div>
       <button class="ac-save-btn" onclick="doXiaomiLogin()" id="xiaomiLoginBtn" style="display:block;margin:0 auto">生成二维码</button>
       <div id="xiaomiDeviceList" style="display:none;margin-top:12px;max-height:300px;overflow-y:auto"></div>
@@ -313,39 +317,10 @@ function api(cmd) {
 
 function loadAll(force) {
   document.getElementById('refreshInfo').textContent = '\u{23F3}';
-  var cmd = force ? 'refresh' : 'status_lite';  // 首次用 Lua 秒出，强制刷新用 Python
+  var cmd = force ? 'refresh' : 'status_lite';
   api(cmd).then(function(d){
     statusData = d; updateStatus(d);
     document.getElementById('refreshInfo').textContent = '';
-    // 天气缺失时自动轮询（换位置/首次安装等场景）
-    if (!force && d && d.weather && d.weather.temp === '--') {
-      var _polls = 0;
-      var _pollTimer = setInterval(function(){
-        if (_polls++ > 5) { clearInterval(_pollTimer); return; }
-        api('status_lite').then(function(wd){
-          if (wd && wd.weather && wd.weather.temp !== '--') {
-            statusData.weather = wd.weather;
-            if (wd.storm_name) { statusData.storm_dist = wd.storm_dist; statusData.storm_name = wd.storm_name; }
-            updateStatus(statusData);
-            clearInterval(_pollTimer);
-          }
-        });
-      }, 8000);
-    }
-    // 非强制刷新时，后台异步拉 Python 全量数据（天气/台风），只补充不覆盖
-    if (!force) {
-      setTimeout(function(){
-        api('status').then(function(full){
-          if (full && !full.error && !full.disabled) {
-            // 只更新有数据的字段，不覆盖已有的好数据
-            if (full.weather && full.weather.temp && full.weather.temp !== '--') statusData.weather = full.weather;
-            if (full.storm_name) { statusData.storm_dist = full.storm_dist; statusData.storm_name = full.storm_name; }
-            if (full.state && full.state.power) statusData.state = full.state;
-            updateStatus(statusData);
-          }
-        });
-      }, 100);
-    }
     // 无设备时后台自动扫描，不阻塞主界面渲染
     if (!force && d && !d.disabled && (!d.devices || d.devices.length === 0)) {
       document.getElementById('refreshInfo').textContent = '首次自动扫描...';
@@ -363,6 +338,30 @@ function loadAll(force) {
       });
     }
   });
+}
+
+// ── 持续刷新开关 ──
+var _autoRefreshTimer = null;
+var _autoRefreshOn = true;
+
+function toggleAutoRefresh() {
+  var btn = document.getElementById('autoRefreshBtn');
+  if (_autoRefreshOn) {
+    clearInterval(_autoRefreshTimer);
+    _autoRefreshOn = false;
+    btn.style.color = '';
+    btn.title = '开启持续刷新';
+  } else {
+    _autoRefreshOn = true;
+    btn.style.color = '#3498db';
+    btn.title = '停止持续刷新';
+    loadAll(true);  // 立即强制刷新一次
+    _autoRefreshTimer = setInterval(function(){
+      api('status_lite').then(function(d){
+        if (d && !d.error && !d.disabled) { statusData = d; updateStatus(d); }
+      });
+    }, 2000);
+  }
 }
 
 function updateStatus(d) {
@@ -412,19 +411,22 @@ function updateStatus(d) {
 
   document.getElementById('locName').textContent = '📍 ' + ((d.location && d.location.name) || '--');
   var sd = d.storm_dist || 99999;
-  document.getElementById('stormDist').textContent = sd < 99999 ? sd + 'km' : '--';
-  var ab = document.getElementById('alertBox');
-  if (sd < 100) ab.innerHTML = '<div class="ac-alert-row ac-alert-danger">&#x1F32A; ' + d.storm_name + ' ' + sd + 'km</div>';
-  else if (sd < 800) ab.innerHTML = '<div class="ac-alert-row ac-alert-warn">&#x26A0; ' + d.storm_name + ' ' + sd + 'km</div>';
-  else if (sd < 99999) ab.innerHTML = '<div class="ac-alert-row ac-alert-safe">&#x2705; ' + d.storm_name + ' ' + sd + 'km</div>';
-  else ab.innerHTML = '';
+  var sw = d.storm_wind || 0;
+  var sIcon = '';
+  if (sd < 99999) {
+    if (sw >= 41) sIcon = '🔴';        // 强台风
+    else if (sw >= 33) sIcon = '🟠';    // 台风
+    else sIcon = '🟢';                  // 默认
+  }
+  document.getElementById('stormDist').textContent = sd < 99999 ? sIcon + ' ' + sd + 'km' : '--';
+  document.getElementById('alertBox').innerHTML = '';
 
   // 模板摘要
   var sc = d.schedule || {};
   document.getElementById('schedStatus').textContent = sc.enabled ? '已开启' : '已关闭';
   document.getElementById('schedTmpl').textContent = sc.enabled ? (sc.template_name || '默认') : '--';
   document.getElementById('autoAdjStatus').textContent = sc.auto_adjust ? '开启' : '关闭';
-  document.getElementById('lastAction').textContent = (d.state && d.state.last_action) || '';
+  document.getElementById('lastAction').textContent = (d.state && d.state.last_action) || '\u00A0';
 }
 
 // ── 空调控制 ──
@@ -451,7 +453,7 @@ function doSend() {
   var fm = {auto:'自动', low:'低', medium:'中', high:'高'};
   var s = '\u23F3 发送中...';
   showError(s);
-  var cmd = 'send ' + current.power + ' ' + current.mode + ' ' + current.temp + ' ' + current.fan;
+  var cmd = 'send ' + current.power + ' ' + current.mode + ' ' + current.temp + ' ' + current.fan + ' ' + (current.devMac || '');
   api(cmd).then(function(d){
     if (d.queued) {
       // 后台服务处理中，轮询结果
@@ -462,7 +464,6 @@ function doSend() {
           if (r.ok) {
             clearInterval(_poll);
             showError('\u2705 ' + (r.msg || '已发送'));
-            loadAll();  // 刷新状态
           } else if (!r.pending) {
             clearInterval(_poll);
             showError('\u274C ' + (r.error || '发送失败'));
@@ -480,7 +481,7 @@ function showError(msg) {
   var el = document.getElementById('lastAction');
   el.textContent = msg; el.style.color = '';
   if (showError._t) clearTimeout(showError._t);
-  showError._t = setTimeout(function(){ el.textContent = ''; }, 3000);
+  showError._t = setTimeout(function(){ el.textContent = '\u00A0'; }, 3000);
 }
 
 // ── 设备发现 ──
@@ -511,13 +512,25 @@ function discoverDevices() {
 function switchDevice(mac) {
   if (!mac) return;
   current.devMac = mac;
+  // 发请求前先清零 schedule，防止回包前打开弹窗读到旧设备的开关状态
+  statusData = statusData || {};
+  statusData.schedule = { enabled: false, auto_adjust: false, active_template: '', templates: {}, template_name: '--', rules: [] };
+  var requestedMac = mac;
   api('switch ' + mac).then(function(d){
+    // 用户已切到其他设备 → 丢弃这个回包
+    if (current.devMac !== requestedMac) return;
     if (d.ok) {
       // 更新缓存并渲染（updateStatus 统一处理 devName/设备信息/在线状态/定时摘要）
       statusData = statusData || {};
-      statusData.device_name = d.device_name || mac;
+      var resolvedName = d.device_name || mac;
+      statusData.device_name = resolvedName;
       statusData.device_info = d.device_info || statusData.device_info || {};
       statusData.online = d.online;
+      // 同步 devices 数组中的设备名 → 下拉框选项和状态区显示一致
+      var devs = statusData.devices || [];
+      for (var i = 0; i < devs.length; i++) {
+        if (devs[i].mac === mac) { devs[i].name = resolvedName; break; }
+      }
       if (d.schedule) {
         // switch_dev 返回 active_template，updateStatus 读 template_name → 做一下映射
         statusData.schedule = statusData.schedule || {};
@@ -525,7 +538,11 @@ function switchDevice(mac) {
         statusData.schedule.active_template = d.schedule.active_template || '';
         statusData.schedule.auto_adjust = d.schedule.auto_adjust;
         statusData.schedule.template_name = d.schedule.active_template || '--';
+        statusData.schedule.rules = d.schedule.rules || [];
       }
+      // 清除旧设备的 state，避免 updateStatus 把旧设备的电源/模式/温度/风速覆盖到 current
+      // 控件保持用户最后一次操作的值，只有用户手动点/滑才会变
+      statusData.state = {};
       updateStatus(statusData);
       document.getElementById('devSelect').value = mac;
     }
@@ -624,14 +641,7 @@ window.open('/cgi-bin/luci/admin/services/acnexus/download_guide', '_blank');
 // ── 定时模板弹窗 ──
 function fillScheduleForm() {
   var d = statusData;
-  var devName = '--';
-  if (d && d.devices && d.devices.length > 0) {
-    var curMac = current.devMac || '';
-    for (var i = 0; i < d.devices.length; i++) {
-      if (d.devices[i].mac === curMac) { devName = d.devices[i].name; break; }
-    }
-    if (devName === '--') devName = d.devices[0].name;
-  }
+  var devName = (d.device_name && d.device_name !== '--') ? d.device_name : '--';
   document.getElementById('schedDevName').textContent = devName;
 
   // 加载模板数据
@@ -643,6 +653,8 @@ function fillScheduleForm() {
   if (Object.keys(_templates).length === 0) {
     _templates['默认'] = {groups: [{days: [1,2,3,4,5], slots: [{on: '10:00', off: '22:00', on_enabled: true, off_enabled: true}]}]};
     _activeTemplate = '默认';
+    // 自动持久化默认模板到 config.json，确保下拉框下次打开仍可见
+    saveScheduleSilent();
   }
   if (!_activeTemplate || !_templates[_activeTemplate]) {
     _activeTemplate = Object.keys(_templates)[0];
@@ -700,6 +712,7 @@ function addTemplate() {
   refreshTmplSelect();
   _editingGroupIdx = 0;
   renderTemplateEditor();
+  saveScheduleSilent();  // 新增模板立即持久化
 }
 
 function delTemplate() {
@@ -711,6 +724,7 @@ function delTemplate() {
   _editingGroupIdx = 0;
   refreshTmplSelect();
   renderTemplateEditor();
+  saveScheduleSilent();  // 删除模板立即持久化
 }
 
 function renderTemplateEditor() {
@@ -729,15 +743,15 @@ function renderTemplateEditor() {
     for (var g = 0; g < tmpl.groups.length; g++) {
       h += '<button class="ac-toolbar-btn" onclick="_editingGroupIdx=' + g + ';renderTemplateEditor()" style="' + (g === _editingGroupIdx ? 'background:#e94560;color:#fff;border-color:#e94560' : '') + '">组' + (g+1) + '</button>';
     }
-    h += '<button class="ac-toolbar-btn" onclick="addGroup()" style="font-size:16px;padding:2px 8px">+</button>';
-    if (tmpl.groups.length > 1) h += '<button class="ac-toolbar-btn" onclick="delGroup()" style="color:#e74c3c;font-size:14px;padding:2px 8px">&times;</button>';
+    h += '<button class="ac-toolbar-btn" onclick="addGroup()" style="font-size:18px;padding:2px 8px">+</button>';
+    if (tmpl.groups.length > 1) h += '<button class="ac-toolbar-btn" onclick="delGroup()" style="color:#e74c3c;font-size:20px;padding:2px 6px">&times;</button>';
     h += '</div>';
   } else {
     h += '<div style="margin-bottom:6px"><button class="ac-add-btn" onclick="addGroup()">+ 添加日期组</button></div>';
   }
 
   // 日期勾选
-  h += '<div class="ac-field-label">日期</div>';
+  h += '<div class="ac-field-label">日期 <span class="ac-help-tip" title="勾选需要执行定时任务的星期几，未勾选的日子不会开关机">?</span></div>';
   h += '<div class="ac-day-row">';
   for (var d = 0; d < 7; d++) {
     var active = grp.days.indexOf(d+1) >= 0;
@@ -746,18 +760,19 @@ function renderTemplateEditor() {
   h += '</div>';
 
   // 时间段
-  h += '<div class="ac-field-label">时间段</div>';
+  h += '<div class="ac-field-label">时间段 <span class="ac-help-tip" title="每个时间段包含开机和关机时间，勾选框控制是否启用该时段。可添加多个时段实现分段控制">?</span></div>';
   var slots = grp.slots || [];
   for (var s = 0; s < slots.length; s++) {
     var slot = slots[s];
     h += '<div class="ac-slot-row">';
     h += '<span class="ac-slot-label">' + (s+1) + '</span>';
-    h += '<input type="checkbox" ' + (slot.on_enabled !== false ? 'checked' : '') + ' onchange="updateSlot(' + s + ',this)" data-field="on_enabled" style="width:16px;height:16px;accent-color:#e94560">';
-    h += '<input type="text" value="' + (slot.on || '10:00') + '" onchange="updateSlot(' + s + ',this)" data-field="on" placeholder="开机">';
-    h += '<span style="font-size:11px;color:var(--cbi-text-secondary)">→</span>';
-    h += '<input type="text" value="' + (slot.off || '22:00') + '" onchange="updateSlot(' + s + ',this)" data-field="off" placeholder="关机">';
+    h += '<input type="checkbox" ' + (slot.on_enabled !== false ? 'checked' : '') + ' onchange="updateSlot(' + s + ',this)" data-field="on_enabled" style="width:16px;height:16px;accent-color:#2ecc71">';
+    h += '<span style="font-size:11px;color:var(--cbi-text-secondary);white-space:nowrap">开机</span>';
+    h += '<input type="text" value="' + (slot.on || '10:00') + '" onchange="updateSlot(' + s + ',this)" data-field="on" placeholder="10:00">';
+    h += '<span style="font-size:11px;color:var(--cbi-text-secondary);white-space:nowrap">关机</span>';
+    h += '<input type="text" value="' + (slot.off || '22:00') + '" onchange="updateSlot(' + s + ',this)" data-field="off" placeholder="22:00">';
     h += '<input type="checkbox" ' + (slot.off_enabled !== false ? 'checked' : '') + ' onchange="updateSlot(' + s + ',this)" data-field="off_enabled" style="width:16px;height:16px;accent-color:#e94560">';
-    h += '<button class="ac-slot-del" onclick="delSlot(' + s + ')">&times;</button>';
+    h += '<button class="ac-slot-del" onclick="delSlot(' + s + ')">×</button>';
     h += '</div>';
   }
   h += '<button class="ac-add-btn" onclick="addSlot()" style="margin-top:4px">+ 添加时间段</button>';
@@ -867,9 +882,30 @@ function saveSchedule() {
     auto_adjust: document.getElementById('autoAdjust').checked
   };
   api('save_schedule ' + b64(JSON.stringify(data))).then(function(d){
-    if (d.ok) { closeModal('schedule'); loadAll(); }
+    if (d.ok) {
+      // 乐观更新本地 state，避免 loadAll() 异步回来前重开弹窗读到旧值
+      statusData.schedule = statusData.schedule || {};
+      statusData.schedule.enabled = data.schedule_enabled;
+      statusData.schedule.auto_adjust = data.auto_adjust;
+      statusData.schedule.active_template = data.active_template;
+      statusData.schedule.template_name = data.active_template || '--';
+      statusData.schedule.templates = data.templates;
+      closeModal('schedule'); loadAll();
+    }
     else showError(d.error || '保存失败');
   });
+}
+
+// 静默保存（不关弹窗，不提示，用于自动持久化默认模板）
+function saveScheduleSilent() {
+  var data = {
+    mac: current.devMac || '',
+    schedule_enabled: _schedEnabled,
+    templates: _templates,
+    active_template: _activeTemplate,
+    auto_adjust: document.getElementById('autoAdjust').checked
+  };
+  api('save_schedule ' + b64(JSON.stringify(data)));
 }
 
 // ── 设备设置弹窗 ──
@@ -877,22 +913,9 @@ function fillDeviceForm() {
   var d = statusData || {};
   // 直接用后端返回的 device_name（初始加载 + 切换设备都会更新）
   var devName = (d.device_name && d.device_name !== '--') ? d.device_name : '--';
-  var isXiaomi = false;
-  // 从 devices 数组判断是否为小米设备
-  var curMac = current.devMac || '';
-  var devs = d.devices || [];
-  for (var i = 0; i < devs.length; i++) {
-    if (devs[i].mac === curMac) {
-      isXiaomi = devs[i].provider === 'xiaomi_cloud';
-      break;
-    }
-  }
-  // 兜底：device_name 为空时用首台
-  if (devName === '--' && devs.length > 0) {
-    devName = devs[0].name || '--';
-    isXiaomi = devs[0].provider === 'xiaomi_cloud';
-  }
+  // 从 device_info.brand 直接判断（切换设备后已更新）
   var info = d.device_info || {};
+  var isXiaomi = info.brand === 'xiaomi_cloud';
   document.getElementById('devSetName').textContent = devName;
   document.getElementById('devNameInfo').textContent = devName;
   document.getElementById('devNameInput').value = devName;
@@ -982,59 +1005,68 @@ function deleteDevice() {
 
 loadAll();
 
+// 默认进入插件即开启持续刷新
+_autoRefreshTimer = setInterval(function(){
+  api('status_lite').then(function(d){
+    if (d && !d.error && !d.disabled) { statusData = d; updateStatus(d); }
+  });
+}, 2000);
+
 // ── 米家设备添加 ──
 var _xiaomiDevices = [];
 var _xiaomiLoginUrl = '';
+var _xiaomiChecked = {};  // 记录用户已勾选的 did，防止列表刷新后丢失勾选状态
 
 function openXiaomiModal() {
   _xiaomiDevices = [];
   _xiaomiLoginUrl = '';
+  _xiaomiChecked = {};
   document.getElementById('xiaomiQR').style.display = 'none';
-  document.getElementById('xiaomiLoginLink').style.display = 'none';
-  document.getElementById('xiaomiMsg').textContent = '正在生成二维码...';
-  document.getElementById('xiaomiLoginBtn').style.display = 'block';
-  document.getElementById('xiaomiLoginBtn').textContent = '生成二维码';
-  document.getElementById('xiaomiLoginBtn').onclick = doXiaomiLogin;
+  document.getElementById('xiaomiLoginBtn').style.display = 'none';
   document.getElementById('xiaomiDeviceList').style.display = 'none';
   document.getElementById('xiaomiAddBtn').style.display = 'none';
+  document.getElementById('xiaomiMsg').textContent = '正在检测登录状态...';
   openModal('xiaomi');
+  // 先尝试直接用已有凭证拉取设备列表
+  api('xiaomi_devices').then(function(r){
+    if (!r.error && r.devices && r.devices.length > 0) {
+      _xiaomiDevices = r.devices || [];
+      renderXiaomiDeviceList();
+      document.getElementById('xiaomiMsg').textContent = '已登录，可直接添加设备';
+    } else {
+      // 未登录，走扫码流程
+      doXiaomiLogin();
+    }
+  }).catch(function(){
+    doXiaomiLogin();
+  });
 }
 
 function doXiaomiLogin() {
   document.getElementById('xiaomiMsg').textContent = '正在获取登录链接...';
-  document.getElementById('xiaomiLoginBtn').disabled = true;
+  document.getElementById('xiaomiLoginBtn').style.display = 'none';
   api('xiaomi_login').then(function(r){
-    document.getElementById('xiaomiLoginBtn').disabled = false;
     if (r.login_url) {
       _xiaomiLoginUrl = r.login_url;
-      // 用 api.qrserver.com 生成二维码（Google Charts 在国内可能被墙）
       var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(r.login_url);
       document.getElementById('xiaomiQR').src = qrUrl;
-      document.getElementById('xiaomiQR').style.display = 'block';
-      document.getElementById('xiaomiLoginLink').href = r.login_url;
-      document.getElementById('xiaomiLoginLink').style.display = 'block';
-      document.getElementById('xiaomiMsg').textContent = '请用米家 App 扫描二维码，或点击链接打开';
-      document.getElementById('xiaomiLoginBtn').textContent = '检测登录状态';
-      document.getElementById('xiaomiLoginBtn').onclick = doXiaomiPoll;
+      document.getElementById('xiaomiQR').style.display = 'inline-block';
+      document.getElementById('xiaomiMsg').textContent = '请用米家 App 扫描二维码，扫码后自动检测...';
+      // 自动轮询，扫码后自动加载设备列表
+      var tid = setInterval(function(){
+        api('xiaomi_poll').then(function(r){
+          if (r.status === 'ok') {
+            clearInterval(tid);
+            document.getElementById('xiaomiMsg').textContent = '登录成功！正在拉取设备...';
+            loadXiaomiDevices();
+          }
+        });
+      }, 3000);
     } else {
-      document.getElementById('xiaomiMsg').textContent = '失败: ' + (r.error || '未知');
-    }
-  });
-}
-
-function doXiaomiPoll() {
-  document.getElementById('xiaomiMsg').textContent = '正在检测...';
-  api('xiaomi_poll').then(function(r){
-    if (r.status === 'ok') {
-      document.getElementById('xiaomiMsg').textContent = '登录成功！正在拉取设备...';
-      document.getElementById('xiaomiLoginBtn').style.display = 'none';
-      loadXiaomiDevices();
-    } else if (r.status === 'timeout') {
-      document.getElementById('xiaomiMsg').textContent = '登录超时，请重试';
-      document.getElementById('xiaomiLoginBtn').textContent = '前往登录';
+      document.getElementById('xiaomiLoginBtn').style.display = 'block';
+      document.getElementById('xiaomiLoginBtn').textContent = '重试';
       document.getElementById('xiaomiLoginBtn').onclick = doXiaomiLogin;
-    } else {
-      document.getElementById('xiaomiMsg').textContent = '等待扫码中...(可再次点击检测)';
+      document.getElementById('xiaomiMsg').textContent = '失败: ' + (r.error || '未知');
     }
   });
 }
@@ -1043,23 +1075,36 @@ function loadXiaomiDevices() {
   api('xiaomi_devices').then(function(r){
     if (r.error) { document.getElementById('xiaomiMsg').textContent = '获取失败: ' + r.error; return; }
     _xiaomiDevices = r.devices || [];
-    var h = '';
-    for (var i=0; i<_xiaomiDevices.length; i++) {
-      var d = _xiaomiDevices[i];
-      h += '<div style=\"display:flex;align-items:center;padding:4px 0;border-bottom:1px solid var(--border,#eee)\">';
-      h += '<input type=\"checkbox\" value=\"' + d.did + '\" ' + (d.added ? 'checked disabled' : '') + ' style=\"margin-right:8px\">';
-      h += '<span>' + d.model + '</span>';
-      if (d.added) h += '<span style=\"margin-left:auto;font-size:10px;color:var(--cbi-text-secondary)\">已添加</span>';
-      h += '</div>';
-    }
-    if (_xiaomiDevices.length === 0) {
-      h = '<p>未发现米家设备</p>';
-    }
-    document.getElementById('xiaomiDeviceList').innerHTML = h;
-    document.getElementById('xiaomiDeviceList').style.display = 'block';
-    document.getElementById('xiaomiAddBtn').style.display = 'block';
+    renderXiaomiDeviceList();
     document.getElementById('xiaomiMsg').textContent = '勾选设备后点击确认添加';
   });
+}
+
+function renderXiaomiDeviceList() {
+  // 保存当前用户勾选状态
+  var listEl = document.getElementById('xiaomiDeviceList');
+  if (listEl) {
+    var currentChecks = listEl.querySelectorAll('input[type=checkbox]:checked:not([disabled])');
+    for (var c = 0; c < currentChecks.length; c++) {
+      _xiaomiChecked[currentChecks[c].value] = true;
+    }
+  }
+  var h = '';
+  for (var i=0; i<_xiaomiDevices.length; i++) {
+    var d = _xiaomiDevices[i];
+    var checked = d.added || _xiaomiChecked[d.did];
+    h += '<div style=\"display:flex;align-items:center;padding:4px 0;border-bottom:1px solid var(--border,#eee)\">';
+    h += '<input type=\"checkbox\" value=\"' + d.did + '\" ' + (d.added ? 'checked disabled' : (checked ? 'checked' : '')) + ' style=\"margin-right:8px\">';
+    h += '<span>' + d.model + '</span>';
+    if (d.added) h += '<span style=\"margin-left:auto;font-size:10px;color:var(--cbi-text-secondary)\">已添加</span>';
+    h += '</div>';
+  }
+  if (_xiaomiDevices.length === 0) {
+    h = '<p>未发现米家设备</p>';
+  }
+  document.getElementById('xiaomiDeviceList').innerHTML = h;
+  document.getElementById('xiaomiDeviceList').style.display = 'block';
+  document.getElementById('xiaomiAddBtn').style.display = 'block';
 }
 
 function doXiaomiAdd() {
@@ -1072,12 +1117,19 @@ function doXiaomiAdd() {
     }
   }
   if (toAdd.length === 0) { alert('请至少勾选一个设备'); return; }
+  var btn = document.getElementById('xiaomiAddBtn');
+  var msg = document.getElementById('xiaomiMsg');
+  btn.disabled = true;
+  btn.textContent = '添加中...';
+  msg.textContent = '正在获取设备信息，请稍候...';
   api('xiaomi_add ' + b64(JSON.stringify(toAdd))).then(function(r){
+    btn.disabled = false;
+    btn.textContent = '确认添加';
     if (r.ok) {
       closeModal('xiaomi');
       loadAll();
     } else {
-      document.getElementById('xiaomiMsg').textContent = '添加失败: ' + (r.error || '未知');
+      msg.textContent = '添加失败: ' + (r.error || '未知');
     }
   });
 }

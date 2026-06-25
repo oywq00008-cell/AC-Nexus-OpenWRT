@@ -8,7 +8,6 @@
 
 import json
 import hashlib
-import hmac
 import base64
 import codecs
 import http.cookiejar
@@ -35,7 +34,7 @@ import acnexus_core.config as _cfg
 _ctx = ssl.create_default_context()
 _ctx.check_hostname = False
 _ctx.verify_mode = ssl.CERT_NONE
-_UA = "AC-Nexus-OpenWRT/3.2"
+_UA = "AC-Nexus-OpenWRT/5.0.0"
 
 def _save_login_state():
     """持久化登录轮询状态到文件（跨 API 进程共享）"""

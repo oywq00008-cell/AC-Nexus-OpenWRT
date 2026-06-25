@@ -2,7 +2,7 @@
 
 # AC-Nexus-OpenWRT
 
-> OpenWRT router plugin for fully automatic air conditioning control via Broadlink RM. Weather-aware, storm-protected, 24/7 unattended operation.
+> OpenWRT router plugin for fully automatic air conditioning control via Broadlink RM and Xiaomi MIoT. Weather-aware, storm-protected, 24/7 unattended operation.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenWRT](https://img.shields.io/badge/OpenWRT-21%2B-blue.svg)]()
@@ -15,20 +15,20 @@
 - 🌀 **Storm Auto-Protection** — 3-tier wind-speed/distance threshold: super typhoon 100km / typhoon 70km / default 50km, auto-shutdown + schedule pause
 - ⏰ **Multi-Group Schedule Templates** — Separate weekday/weekend schedules with multiple time slots
 - 🌡️ **Temperature Rules** — Auto-select target temp/mode based on outdoor temperature
-- 🏷️ **Multi-Device Management** — Broadlink RM, auto-dedup, custom nicknames
-- 🔌 **Xiaomi IR Remote Support** — MIoT LAN protocol, built-in 1300+ model spec index (OAuth login pending)
+- 🏷️ **Multi-Device Management** — Broadlink RM / Xiaomi AC Partner / Xiaomi IR Remote, auto-dedup, custom nicknames
+- 🔌 **Xiaomi MIoT Full Support** — OAuth QR login, auto device list, per-model siid/piid online matching, 3400+ model local index
 - 🛡️ **Built-in Core Libs** — hvac_ir, broadlink, schedule, pyaes all bundled, zero pip dependencies
 - 📥 **Log Download** — Per-day Markdown archives, one-click download from browser
 
 ## 📸 Screenshots
 
-| Dashboard | Schedule Templates |
-|-----------|-------------------|
-| ![](主界面.png) | ![](定时.png) |
+| Dashboard | Schedule & Auto-Adjust |
+|-----------|------------------------|
+| ![](assets/控制面板.PNG) | ![](assets/定时开关机%26自动调温.PNG) |
 
-| Temperature Rules | Device Settings |
-|-------------------|-----------------|
-| ![](规则.png) | ![](设备设置.png) |
+| CBI Settings | Temperature Rules |
+|--------------|-------------------|
+| ![](assets/CBI设置.PNG) | ![](assets/温度规则.PNG) |
 
 ## 🚀 Quick Start
 
@@ -43,20 +43,7 @@ Easiest for beginners. Download `acnexus_*.ipk` from [Releases](https://github.c
 3. Select the downloaded `.ipk` file
 4. Wait for install, refresh the page — done.
 
-> The IPK installer auto-handles: dependency install, CRLF fix, permissions, config.json generation, LuCI cache refresh, and service start. **Zero manual steps required.**
-
-### Option B: .run Script (Fallback)
-
-Use this if Option A fails due to proxy/DNS issues. Download the `.run` file from [Releases](https://github.com/oywq00008-cell/AC-Nexus-OpenWRT/releases):
-
-```bash
-# Upload to router
-scp acnexus_*.run root@your-router-ip:/tmp/
-
-# SSH in and install
-ssh root@your-router-ip
-bash /tmp/acnexus_*.run
-```
+> The IPK installer auto-handles: CRLF fix, permissions, Python module check, config.json generation, LuCI cache refresh, and service start. **Zero manual steps required.**
 
 ### Upgrading from Old BroadlinkAC
 

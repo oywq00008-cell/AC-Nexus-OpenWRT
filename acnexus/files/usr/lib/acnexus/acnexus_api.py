@@ -63,7 +63,6 @@ if cmd == "status" or cmd == "refresh":
     from acnexus_core.config import save_config
 
     # config.json → UCI 反向同步（弹窗存的字段反向写 UCI，让 CBI 页面能显示）
-    # 这样用户在弹窗里填的 API key 也能在 CBI 设置页看到
     try:
         import subprocess as _sp
         cfg_path = "/root/.ac_controller/config.json"
@@ -81,98 +80,44 @@ if cmd == "status" or cmd == "refresh":
     except Exception:
         pass
 
-    # 同步 UCI → config.json（必须在 disabled 短路之前完成，否则 enabled 行被 CBI 删了后无法判断）
+    # 总开关短路：UCI 为权威来源
     try:
-        import subprocess as _sp
-        uci = {}
-        for line in _sp.run(['uci', 'show', 'acnexus'], capture_output=True, text=True).stdout.splitlines():
-            if '=' in line and ('acnexus.@acnexus[0].' in line or 'acnexus.settings.' in line):
-                k, v = line.split('=', 1)
-                key = k.replace('acnexus.@acnexus[0].', '').replace('acnexus.settings.', '')
-                uci[key] = v.strip("'")
-        cfg_path = "/root/.ac_controller/config.json"
-        if os.path.exists(cfg_path) and uci:
-            with open(cfg_path) as f:
-                cfg = json.load(f)
-            changed = False
-            for k, v in uci.items():
-                if k in ('weather_provider_set',):
-                    cfg[k] = (v == '1')
-                    changed = True
-                elif k in ('typhoon_ac_off',):
-                    cfg[k] = (v == '1')
-                    changed = True
-                elif k in ('location_lat', 'location_lon'):
-                    cfg.setdefault('location', {})
-                    cfg['location'][k.replace('location_', '')] = float(v)
-                    changed = True
-                elif k == 'location_name':
-                    cfg.setdefault('location', {})
-                    cfg['location']['name'] = v
-                    changed = True
-                elif k == 'api_key':
-                    cfg['api_key'] = v
-                    changed = True
-                elif k in ('qw_host', 'baidu_key', 'weather_provider', 'typhoon_provider', 'appearance_mode'):
-                    cfg[k] = v
-                    changed = True
-                elif k == 'enabled':
-                    # enabled 直接信任 UCI 值：'1' → True，'0' 或缺失 → False
-                    # 注意：如果 UCI 中完全不存在 enabled（首次安装），此处不会进入，保持 config 原值
-                    cfg['enabled'] = (v == '1')
-                    changed = True
-
-            # enabled 特殊处理：CBI 取消勾选时 UCI 会直接删除该行（uhttpd 不写 enabled='0'）。
-            # UCI 从未配置过时 enabled 缺失应视为 True，仅当 config.json 已明确存为 False 才保持。
-            if 'enabled' not in uci:
-                if cfg.get('enabled') is True or 'enabled' not in cfg:
-                    pass  # 保持 True——UCI 未配置，不设 False
-                elif cfg.get('enabled') is False:
-                    pass  # 已在 config 中明确定为 False，保持
-
-            # 修复：如果 devices 内的 provider 被误写为数组，强制纠正
-            for p in ['broadlink', 'xiaomi_cloud']:
-                if not isinstance(cfg.get('devices', {}).get(p), dict):
-                    cfg['devices'][p] = {}
-                    changed = True
-
-            # device 节同步...
-            for line in _sp.run(['uci', 'show', 'acnexus'], capture_output=True, text=True).stdout.splitlines():
-                if '.mac=' in line and line.startswith('acnexus.@device'):
-                    sec = line.split('.mac=')[0]
-                    uci_mac = line.split('.mac=')[1].strip("'")
-                    cfg.setdefault('devices', {})
-                    cfg['devices'].setdefault('broadlink', {})
-                    d = cfg['devices']['broadlink'].setdefault(uci_mac, {})
-                    d['mac'] = uci_mac
-                    for f in ('name', 'brand', 'host', 'port'):
-                        r = _sp.run(['uci', 'get', f'{sec}.{f}'], capture_output=True, text=True)
-                        v = r.stdout.strip()
-                        if r.returncode == 0 and v:
-                            d[f] = v
-                    changed = True
-
-            if changed:
-                with open(cfg_path, 'w') as f:
-                    json.dump(cfg, f, indent=2, ensure_ascii=False)
-    except Exception:
-        pass
-
-    # 总开关短路：enabled=False 立即返回
-    # 注意：只有 config.json 中明确存为 False 才停用，缺失默认视为启用
-    try:
-        cfg_path_disabled = "/root/.ac_controller/config.json"
-        _cfg_for_disabled = {}
-        if os.path.exists(cfg_path_disabled):
-            with open(cfg_path_disabled) as f:
-                _cfg_for_disabled = json.load(f)
-        if _cfg_for_disabled.get("enabled") is False:
+        import subprocess as _sp_dis
+        # UCI 为权威：先查 UCI 的 enabled 值
+        uci_enabled = ""
+        try:
+            _r = _sp_dis.run(['uci', '-q', 'get', 'acnexus.@acnexus[0].enabled'],
+                             capture_output=True, text=True)
+            uci_enabled = _r.stdout.strip()
+            if not uci_enabled:
+                _r = _sp_dis.run(['uci', '-q', 'get', 'acnexus.settings.enabled'],
+                                 capture_output=True, text=True)
+                uci_enabled = _r.stdout.strip()
+        except Exception:
+            pass
+        # UCI=1 → 启用；UCI=0/缺失 → 回退 config.json
+        if uci_enabled == "1":
+            pass  # 明确启用，继续
+        elif uci_enabled == "0":
             result = {"disabled": True, "online": False,
                       "device_name": "插件已停用", "state": {},
                       "weather": {}, "schedule": {"on": "--", "off": "--"},
                       "storm_dist": 99999, "storm_name": "", "devices": []}
             print(json.dumps(result, ensure_ascii=False))
             sys.exit(0)
+        else:
+            # UCI 缺失时回退 config.json
+            cfg_path_disabled = "/root/.ac_controller/config.json"
+            if os.path.exists(cfg_path_disabled):
+                with open(cfg_path_disabled) as f:
+                    _cfg_for_disabled = json.load(f)
+                if _cfg_for_disabled.get("enabled") is False:
+                    result = {"disabled": True, "online": False,
+                              "device_name": "插件已停用", "state": {},
+                              "weather": {}, "schedule": {"on": "--", "off": "--"},
+                              "storm_dist": 99999, "storm_name": "", "devices": []}
+                    print(json.dumps(result, ensure_ascii=False))
+                    sys.exit(0)
     except Exception:
         pass
 
@@ -328,7 +273,7 @@ if cmd == "status" or cmd == "refresh":
         if force:
             from acnexus_core.typhoon import fetch_and_cache, judge_and_shutdown
             from acnexus_core.logger import write_log
-            fetch_and_cache()
+            fetch_and_cache(force=True)
             judge_and_shutdown(write_log)
         elif not has_recent_cache():
             from acnexus_core.typhoon import fetch_and_cache
@@ -411,6 +356,10 @@ elif cmd == "discover":
                         "mac": d["mac"], "host": d["host"],
                         "port": d["port"], "model": model,
                     })
+                    # 新设备默认关闭定时/自动调温，品牌默认格力
+                    existing.setdefault("brand", "gree")
+                    existing.setdefault("schedule_enabled", False)
+                    existing.setdefault("auto_adjust", False)
                     cfg["devices"]["broadlink"][d["mac"]] = existing
                 if not cfg.get("current_device_mac"):
                     cfg["current_device_mac"] = result["devices"][0]["mac"]
@@ -512,8 +461,8 @@ elif cmd == "xiaomi_devices":
             # 标记已添加的设备
             cfg = load_config()
             added_dids = set()
-            for _, did, dev in _iter_config_devices(cfg):
-                if dev.get("provider") == "xiaomi_cloud":
+            for provider, did, dev in _iter_config_devices(cfg):
+                if provider == "xiaomi_cloud":
                     added_dids.add(did)
             for d in r.get("devices", []):
                 d["added"] = d["did"] in added_dids
@@ -529,6 +478,9 @@ elif cmd.startswith("xiaomi_add "):
         cfg = load_config()
         cfg.setdefault("devices", {})
         cfg["devices"].setdefault("xiaomi_cloud", {})
+        # 防御 Lua cjson 空表序列化 bug：xiaomi_cloud 可能被写成 []（数组）
+        if not isinstance(cfg["devices"]["xiaomi_cloud"], dict):
+            cfg["devices"]["xiaomi_cloud"] = {}
         
         added = []
         skipped = []
@@ -554,7 +506,7 @@ elif cmd.startswith("xiaomi_add "):
                 "name": model, "token": d.get("token", ""),
                 "host": d.get("localip", ""), "port": 54321,
                 "brand": "xiaomi_cloud", "fan": "auto",
-                "schedule_enabled": True, "auto_adjust": True,
+                "schedule_enabled": False, "auto_adjust": False,
                 "temp_rules": None,
                 "miot_spec": spec,
             }

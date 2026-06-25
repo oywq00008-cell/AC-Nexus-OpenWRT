@@ -18,14 +18,15 @@ MODE_KEYS = {v: k for k, v in MODES.items()}
 
 def _get_primary_ip():
     """获取本机主网卡 IP（能路由到外网的那张）"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 1))
         ip = s.getsockname()[0]
-        s.close()
         return ip
     except Exception:
         return '0.0.0.0'
+    finally:
+        s.close()
 
 
 def _subnet_broadcast(ip):
@@ -96,7 +97,7 @@ def send_ac(power: str, mode: str, temp: int, fan: str, source="手动", mac=Non
     if not mac:
         mac = _cfg.config.get("current_device_mac", "")
     
-    # MIoT 设备（小米红外遥控器）：走局域网协议
+    # MIoT 设备（米家MIoT红外遥控器）：走局域网协议
     devs = _cfg.config.get("devices", {})
     if "xiaomi_cloud" in devs and mac in devs.get("xiaomi_cloud", {}):
         dev = devs["xiaomi_cloud"][mac]
@@ -166,7 +167,13 @@ def decide_ac(outdoor, mac=None):
     """根据室外温度 + 当前设备规则，返回 (目标温度, 模式)"""
     if not mac:
         mac = _cfg.config.get("current_device_mac", "")
-    dev = _cfg.config.get("devices", {}).get(mac, {})
+    dev = {}
+    devs = _cfg.config.get("devices", {})
+    if isinstance(devs, dict):
+        for provider, provider_devs in devs.items():
+            if isinstance(provider_devs, dict) and mac in provider_devs:
+                dev = provider_devs[mac]
+                break
     rules = dev.get("temp_rules", [])
     if not rules:
         return 26, "cool"

@@ -30,9 +30,6 @@ def resume_scheduler():
 def _iter_all_devices():
     """遍历 {broadlink: {mac: dev}, xiaomi_cloud: {did: dev}} → (provider, device_id, device)"""
     devs = _cfg.config.get("devices", {})
-    # 兼容旧版扁平格式：{mac: dev}
-    if devs and all(isinstance(v, dict) for v in devs.values()) and not any(isinstance(v, dict) for v in devs.values()):
-        pass  # 保持兼容，下面判断
     for provider, provider_devs in devs.items():
         if not isinstance(provider_devs, dict):
             continue
@@ -162,10 +159,12 @@ def register_all_jobs():
     with _sched_lock:
         sch.clear()
         templates = _cfg.config.get("schedule_templates", {}) or {}
+        if not isinstance(templates, dict):
+            templates = {}
         for provider, device_id, dev in _iter_all_devices():
             tmpl_name = dev.get("active_template")
             tmpl = templates.get(tmpl_name) if tmpl_name else None
-            if tmpl and dev.get("schedule_enabled", True):
+            if tmpl and dev.get("schedule_enabled", False):
                 groups = tmpl.get("groups", [])
                 for grp in groups:
                     days = set(grp.get("days", []))
@@ -176,7 +175,7 @@ def register_all_jobs():
                             sch.every().day.at(on_t).do(_scheduled_on_wrapper, device_id=device_id, days=days)
                         if off_t and slot.get("off_enabled", True):
                             sch.every().day.at(off_t).do(_scheduled_off_wrapper, device_id=device_id, days=days)
-            if dev.get("auto_adjust", True):
+            if dev.get("auto_adjust", False):
                 sch.every(2).hours.do(auto_adjust_job, device_id=device_id)
 
 
@@ -199,7 +198,8 @@ def scheduler_loop():
         with _sched_lock:
             if not _sched_paused:
                 sch.run_pending()
-        time.sleep(max(sch.idle_seconds(), 0) if sch.idle_seconds() is not None else 15)
+        idle = sch.idle_seconds()
+        time.sleep(min(max(idle or 0, 0), 30))  # 最长 30s，确保 enabled 检测及时
 
 
 _sched_started = False
@@ -213,7 +213,13 @@ def start_scheduler():
     threading.Thread(target=scheduler_loop, daemon=True).start()
 
 
+_data_started = False
+
 def start_data_loops():
+    global _data_started
+    if _data_started:
+        return
+    _data_started = True
     threading.Thread(target=_weather_loop, daemon=True).start()
     threading.Thread(target=_typhoon_loop, daemon=True).start()
 

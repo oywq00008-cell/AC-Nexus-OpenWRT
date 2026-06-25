@@ -147,33 +147,21 @@ def calc_distance(lat1, lon1, lat2, lon2):
 
 
 def typhoon_threat_distance(provider=None):
-    """评估最近风暴/飓风距离 (km)。
-    Agent 可直接调用：<100km 即应关机。返回 (距离, 名称)。
-    provider 不传则走 config 当前设置。
+    """评估最近风暴/飓风距离 (km)。直接读缓存，不做实时请求。
+    缓存由 fetch_and_cache() 写入，与 status_lite 共用同一份文件。
     任何异常均返回 (99999, "")，不抛异常。
     """
     import acnexus_core.config as _cfg
     try:
-        provider = provider or _cfg.config.get("typhoon_provider", "nmc")
         lat = _cfg.LOCATION["lat"]
         lon = _cfg.LOCATION["lon"]
         min_dist, name = 99999, ""
-
-        if provider == "nhc":
-            storms = fetch_nhc_storms()
-            for s in storms:
-                d = s.get("detail", {})
-                if d:
-                    dist = calc_distance(lat, lon, d["lat"], d["lon"])
-                    if dist < min_dist:
-                        min_dist, name = dist, d["cn"]
-        else:
-            for t in fetch_typhoons():
-                d = fetch_typhoon_detail(t["id"])
-                if d:
-                    dist = calc_distance(lat, lon, d["lat"], d["lon"])
-                    if dist < min_dist:
-                        min_dist, name = dist, d["cn"]
+        for t in _ty_cache:
+            d = t.get("detail", {})
+            if d:
+                dist = calc_distance(lat, lon, d["lat"], d["lon"])
+                if dist < min_dist:
+                    min_dist, name = dist, d.get("cn", "")
         return min_dist, name
     except Exception as e:
         print(f"[威胁评估] {e}", file=sys.stderr)
@@ -299,13 +287,14 @@ def _save_file_cache(data):
         pass
 
 
-def fetch_and_cache():
+def fetch_and_cache(force=False):
     global _ty_cache
-    # 先尝试文件缓存
-    cached = _load_file_cache()
-    if cached is not None:
-        _ty_cache = cached
-        return
+    # 非强制时优先文件缓存
+    if not force:
+        cached = _load_file_cache()
+        if cached is not None:
+            _ty_cache = cached
+            return
     try:
         import acnexus_core.config as _cfg
         provider = _cfg.config.get("typhoon_provider", "nmc")

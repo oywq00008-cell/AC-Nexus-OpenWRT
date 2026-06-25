@@ -7,13 +7,14 @@
 - 定时任务：每天指定时间触发开关机/自动调温
 - 命令队列：轮询 /tmp/acnexus_cmd.json，毫秒级响应前端发指令
 """
-import sys, os, json, time
+import sys, os, json, time, threading
 sys.path.insert(0, '/usr/lib/acnexus')
 
 from acnexus_core import init
 init()
 
 from acnexus_core.config import load_config, save_config
+import acnexus_core.config as _cfg
 from acnexus_core.scheduler import re_register
 
 # ── 设备缓存：{mac: broadlink_device} ──
@@ -71,7 +72,6 @@ def _process_cmd():
 
         d = _get_broadlink_device(mac, host)
 
-        from acnexus_core.ac_control import _cfg as ac_cfg
         import acnexus_core.config as _cfg_mod
 
         # 解析品牌
@@ -145,8 +145,8 @@ typhoon_interval = 1800
 last_weather = 0
 last_typhoon = 0
 
-def refresh_weather():
-    global last_weather
+def _bg_refresh_weather():
+    """后台线程：拉天气数据 → 原子写缓存（不阻塞主循环）"""
     try:
         from acnexus_core.weather import fetch_weather
         w = fetch_weather()
@@ -157,15 +157,25 @@ def refresh_weather():
             os.rename(tmp, "/tmp/acnexus_weather.json")
     except Exception:
         pass
-    last_weather = time.time()
 
-def refresh_typhoon():
-    global last_typhoon
+def _bg_refresh_typhoon():
+    """后台线程：拉台风数据 → 写缓存（nearest 由 typhoon.py 内置写入）"""
     try:
         from acnexus_core.typhoon import fetch_and_cache
         fetch_and_cache()
     except Exception:
         pass
+
+def refresh_weather():
+    """启动时同步拉取一次（阻塞，确保启动就有数据）"""
+    global last_weather
+    _bg_refresh_weather()
+    last_weather = time.time()
+
+def refresh_typhoon():
+    """启动时同步拉取一次（阻塞，确保启动就有数据）"""
+    global last_typhoon
+    _bg_refresh_typhoon()
     last_typhoon = time.time()
 
 refresh_weather()
@@ -177,14 +187,109 @@ CMD_POLL_WAIT = 0.3  # 300ms 轮询间隔
 cfg_reload_at = 0
 cfg = load_config()
 
+# UCI 直读：兼容 @acnexus[0]（新版匿名节）和 acnexus.settings（旧版命名节）
+def _read_uci(key, default=""):
+    try:
+        # 先尝试匿名节（CBI TypedSection anonymous=true）
+        f = os.popen("uci -q get acnexus.@acnexus[0].%s 2>/dev/null" % key)
+        v = f.read().strip(); f.close()
+        if v:
+            return v
+        # 回退旧版命名节（升级残留）
+        f = os.popen("uci -q get acnexus.settings.%s 2>/dev/null" % key)
+        v = f.read().strip(); f.close()
+        return v or default
+    except: return default
+
+def _sync_uci_to_config():
+    """每次 reload 时把 UCI 里的设置写到 config.json，同时返回是否有变更"""
+    global cfg
+    changed = False
+    typhoon_changed = False
+    weather_changed = False
+    location_changed = False
+    # Flag 字段集合：UCI Flag 取消勾选时不写 "0"，而是直接删除该行
+    FLAG_KEYS = {"enabled", "typhoon_ac_off"}
+    for uci_key, cfg_key in [
+        ("typhoon_provider", "typhoon_provider"),
+        ("typhoon_ac_off", "typhoon_ac_off"),
+        ("weather_provider", "weather_provider"),
+        ("enabled", "enabled"),
+        ("api_key", "api_key"),
+        ("qw_host", "qw_host"),
+        ("baidu_key", "baidu_key"),
+    ]:
+        raw = _read_uci(uci_key)
+        if cfg_key in FLAG_KEYS:
+            # Flag: UCI 删除该行 → raw="" → False; 始终更新（包括 False→False 幂等）
+            actual = (raw == "1")
+            if cfg.get(cfg_key) != actual:
+                cfg[cfg_key] = actual
+                changed = True
+        elif raw and _cfg.config.get(cfg_key) != raw:
+            cfg[cfg_key] = raw
+            changed = True
+            if cfg_key == "typhoon_provider":
+                typhoon_changed = True
+            elif cfg_key == "weather_provider":
+                weather_changed = True
+    # 位置
+    lat, lon = _read_uci("location_lat"), _read_uci("location_lon")
+    if lat and lon:
+        new_name = _read_uci("location_name", cfg.get("location", {}).get("name", "未设置"))
+        if (_cfg.config.get("location", {}).get("lat") != float(lat) or
+            _cfg.config.get("location", {}).get("lon") != float(lon) or
+            _cfg.config.get("location", {}).get("name") != new_name):
+            cfg.setdefault("location", {})
+            cfg["location"]["lat"] = float(lat)
+            cfg["location"]["lon"] = float(lon)
+            cfg["location"]["name"] = new_name
+            changed = True
+            location_changed = True
+    if changed:
+        save_config(cfg)
+    return typhoon_changed, weather_changed or location_changed
+
 while True:
+    # 每 30 秒重读 config + UCI 同步
+    if time.time() - cfg_reload_at > 30:
+        cfg = load_config()
+        # enabled 自检：config.json 明确为 False 或缺失 → 二次验证 UCI 后优雅退出
+        if not cfg.get("enabled", True):
+            if _read_uci("enabled") != "1":
+                # UCI + config.json 一致：procd reload 已处理，安全退出
+                from acnexus_core.scheduler import pause_scheduler
+                try: pause_scheduler()
+                except: pass
+                sys.exit(0)
+            # UCI 仍为 "1" 但 config.json 为 false：过渡状态，跳过本轮工作等待 procd
+            time.sleep(5)
+            continue
+        _cfg.config = cfg               # 先更新内存 config，后续操作依赖新值
+        typhoon_changed, weather_changed = _sync_uci_to_config()
+        cfg_reload_at = time.time()
+        re_register()
+        # 台风源变更 → 立即刷新缓存
+        if typhoon_changed:
+            try:
+                from acnexus_core.typhoon import fetch_and_cache
+                fetch_and_cache(force=True)
+            except: pass
+            last_typhoon = time.time()
+        # 天气源或位置变更 → 立即刷新天气缓存
+        if weather_changed:
+            try:
+                from acnexus_core.weather import fetch_weather
+                w = fetch_weather()
+                if w:
+                    with open("/tmp/acnexus_weather.json.tmp", "w") as f:
+                        json.dump({"ts": time.time(), "data": w}, f)
+                    os.rename("/tmp/acnexus_weather.json.tmp", "/tmp/acnexus_weather.json")
+            except: pass
+            last_weather = time.time()
+
     # 命令队列：毫秒级响应
     if os.path.exists(CMD_FILE):
-        # 每 30 秒重读一次配置（设备变化时自动感知）
-        if time.time() - cfg_reload_at > 30:
-            cfg = load_config()
-            cfg_reload_at = time.time()
-
         result = _process_cmd()
         if result:
             try:
@@ -199,10 +304,12 @@ while True:
         time.sleep(0.1)
         continue
 
-    # 定期刷新天气/台风
+    # 定期刷新天气/台风（后台线程，不阻塞命令队列）
     if time.time() - last_weather > weather_interval:
-        refresh_weather()
+        last_weather = time.time()
+        threading.Thread(target=_bg_refresh_weather, daemon=True).start()
     if time.time() - last_typhoon > typhoon_interval:
-        refresh_typhoon()
+        last_typhoon = time.time()
+        threading.Thread(target=_bg_refresh_typhoon, daemon=True).start()
 
     time.sleep(CMD_POLL_WAIT)

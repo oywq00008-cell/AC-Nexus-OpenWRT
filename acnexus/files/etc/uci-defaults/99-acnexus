@@ -4,40 +4,43 @@
 
 mkdir -p /root/.ac_controller/logs
 
-uci -q get acnexus.@settings[0] > /dev/null 2>&1 || exit 0
+uci -q get acnexus.@acnexus[0] > /dev/null 2>&1 || uci -q get acnexus.settings > /dev/null 2>&1 || exit 0
 
-get() { uci -q get acnexus.@settings[0].$1 || echo ""; }
-getb() { val=$(uci -q get acnexus.@settings[0].$1); [ "$val" = "1" ] && echo "true" || echo "false"; }
+# 纯 Python 生成 config.json，避免 sed 特殊字符注入
+python3 -c "
+import json, os
 
-cat > /root/.ac_controller/config.json << 'JSONEOF'
-{
-  "api_key": "APIKEY",
-  "qw_host": "QWHOST",
-  "baidu_key": "BDKEY",
-  "weather_provider": "WP",
-  "weather_provider_set": true,
-  "location": {
-    "lat": LAT,
-    "lon": LON,
-    "name": "LOCNAME"
-  },
-  "typhoon_provider": "TP",
-  "typhoon_ac_off": ACOFF,
-  "appearance_mode": "system",
-  "devices": {"broadlink": {}, "xiaomi_cloud": {}},
-  "current_device_mac": "",
-  "current_brand_type": "broadlink"
+def get(k, d=''):
+    import subprocess
+    r = subprocess.run(['uci', '-q', 'get', 'acnexus.@acnexus[0].' + k], capture_output=True, text=True)
+    v = r.stdout.strip()
+    if v: return v
+    r = subprocess.run(['uci', '-q', 'get', 'acnexus.settings.' + k], capture_output=True, text=True)
+    return r.stdout.strip() or d
+
+cfg = {
+    'api_key': get('api_key'),
+    'qw_host': get('qw_host'),
+    'baidu_key': get('baidu_key', ''),
+    'weather_provider': get('weather_provider', 'qweather'),
+    'weather_provider_set': True,
+    'location': {
+        'lat': float(get('location_lat', '39.9')),
+        'lon': float(get('location_lon', '116.4')),
+        'name': get('location_name', '\u672a\u8bbe\u7f6e'),
+    },
+    'typhoon_provider': get('typhoon_provider', 'nmc'),
+    'typhoon_ac_off': get('typhoon_ac_off') == '1',
+    'appearance_mode': 'system',
+    'enabled': True,
+    'devices': {'broadlink': {}, 'xiaomi_cloud': {}},
+    'current_device_mac': '',
+    'current_brand_type': 'broadlink',
 }
-JSONEOF
 
-sed -i "s/APIKEY/$(get api_key)/" /root/.ac_controller/config.json
-sed -i "s|QWHOST|$(get qw_host)|" /root/.ac_controller/config.json
-sed -i "s/BDKEY/$(get baidu_key)/" /root/.ac_controller/config.json
-sed -i "s/WP/$(get weather_provider)/" /root/.ac_controller/config.json
-sed -i "s/LAT/$(get location_lat)/" /root/.ac_controller/config.json
-sed -i "s/LON/$(get location_lon)/" /root/.ac_controller/config.json
-sed -i "s/LOCNAME/$(get location_name)/" /root/.ac_controller/config.json
-sed -i "s/TP/$(get typhoon_provider)/" /root/.ac_controller/config.json
-sed -i "s/ACOFF/$(getb typhoon_ac_off)/" /root/.ac_controller/config.json
+os.makedirs(os.path.dirname('/root/.ac_controller/config.json'), exist_ok=True)
+with open('/root/.ac_controller/config.json', 'w') as f:
+    json.dump(cfg, f, indent=2, ensure_ascii=False)
 
-echo "AC-Nexus config initialized"
+print('AC-Nexus config initialized')
+"

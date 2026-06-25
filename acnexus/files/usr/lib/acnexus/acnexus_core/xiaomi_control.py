@@ -44,7 +44,7 @@ _DEFAULT_SPEC = {
 }
 
 _MODES = {"cool": 0, "dry": 4, "fan": 3, "auto": 2}
-_FANS  = {"auto": 0, "low": 1, "medium": 2, "high": 3, "1": 1, "2": 2, "3": 3}
+_FANS  = {"auto": 0, "low": 1, "medium": 2, "high": 3}
 
 MIOT_PORT = 54321
 _INDEX_PATH = "/usr/lib/acnexus/protocols/miot_ir_remote_index.txt.gz"
@@ -60,12 +60,12 @@ _INSTANCES_TTL  = 7 * 86400  # 7 天
 
 
 def _load_online_index():
-    """从 miot-spec.org 下载全量实例列表并缓存到 /tmp。失败返回 {}。
+    """从 miot-spec.org 下载全量实例列表并缓存到 /tmp（过滤仅 AC 相关）。
+    失败返回 {}。
     
-    与桌面版 fetch_miot_spec() 完全对齐：
     1. 检查本地缓存（< 7 天则复用）
     2. 缓存过期则下载 https://miot-spec.org/miot-spec-v2/instances?status=all
-    3. 清洗为 model|type 行式缓存并写入文件
+    3. 只保留 remote-control / air-condition 类型，清洗为 model|type 行式缓存
     """
     import os as _os
     try:
@@ -78,15 +78,19 @@ def _load_online_index():
 
         if instances is None:
             url = "https://miot-spec.org/miot-spec-v2/instances?status=all"
-            req = urllib.request.Request(url, headers={"User-Agent": "AC-Nexus-OpenWRT/3.2"})
+            req = urllib.request.Request(url, headers={"User-Agent": "AC-Nexus-OpenWRT/5.0.0"})
             resp = urllib.request.urlopen(req, timeout=30, context=_ssl_ctx)
             raw = json.loads(resp.read()).get("instances", [])
             lines = []
             instances_dict = {}
             for i in raw:
-                if i.get("model") and i.get("type"):
-                    lines.append(f"{i['model']}|{i['type']}")
-                    instances_dict[i["model"]] = i["type"]
+                model = i.get("model")
+                urn_type = i.get("type", "")
+                if model and urn_type:
+                    # 只保留红外遥控器和空调相关设备（大幅缩减缓存体积）
+                    if "remote-control" in urn_type or "air-condition" in urn_type:
+                        lines.append(f"{model}|{urn_type}")
+                        instances_dict[model] = urn_type
             # 原子写入
             tmp = _INSTANCES_CACHE + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
@@ -143,26 +147,44 @@ def fetch_spec_for_model(model):
         spec = json.loads(resp.read())
 
         result = {}
-        # remote-control 类型的 service 结构:
-        # IR 遥控器通常只有一个 service，包含多个 property
-        for svc in spec.get("services", []):
+        # 按优先级排序：outlet switch（acpartner 伴侣实际电源）> air-conditioner > fan > 其他
+        def _svc_priority(svc):
+            t = (svc.get("type") or "").lower()
+            if "air-condition-outlet" in t:
+                return 0  # acpartner 伴侣类设备用 outlet 控制实际电源
+            if "air-conditioner" in t:
+                return 1  # 空调主服务
+            if "fan-control" in t:
+                return 2
+            return 99
+        svcs = sorted(spec.get("services", []), key=_svc_priority)
+
+        for svc in svcs:
             siid = svc.get("iid", 0)
             svc_type = (svc.get("type") or "").lower()
-            svc_desc = (svc.get("description") or "").lower()
 
             for prop in svc.get("properties", []):
                 piid = prop.get("iid", 0)
                 desc = (prop.get("description") or "").lower()
-                ptype = (prop.get("type") or "").lower()
+                access = prop.get("access", [])
+                is_writable = "write" in access
 
-                # IR 遥控器通过描述字段匹配（remote-control 无标准属性名）
-                if "switch" in desc or "power" in desc or ("on" in desc and "off" in desc):
+                # Power: "Switch Status" / "on" — only in AC services (not outlet/indicator-light)
+                if ("switch" in desc or "on" in desc or "power" in desc) and "power" not in result:
                     result["power"] = {"siid": siid, "piid": piid}
-                elif "mode" in desc and "sleep" not in desc and "temperature" not in desc:
+
+                # Mode: in AC service
+                elif "mode" in desc and "sleep" not in desc and "temperature" not in desc and "mode" not in result:
                     result["mode"] = {"siid": siid, "piid": piid}
-                elif "temperature" in desc or "temp" in desc or "setpoint" in desc:
+
+                # Temperature: "Target Temperature" (writable), NOT sensor (read-only)
+                elif is_writable and ("target temperature" in desc or "target temp" in desc) and "temp" not in result:
                     result["temp"] = {"siid": siid, "piid": piid}
-                elif "fan" in desc or "wind" in desc or "speed" in desc or "airflow" in desc:
+                elif is_writable and ("temperature" in desc or "setpoint" in desc) and "temp" not in result:
+                    result["temp"] = {"siid": siid, "piid": piid}
+
+                # Fan: in fan-control or AC service
+                elif ("fan" in desc or "wind" in desc or "speed" in desc or "airflow" in desc) and "fan" not in result:
                     result["fan"] = {"siid": siid, "piid": piid}
 
         # 检查完整性：缺任何一个键则回退硬编码
@@ -263,7 +285,7 @@ def send_miot(host, token, power, mode, temp, fan, device_id=None, spec=None):
 
     cmds = []
     siid, piid = sp["power"]["siid"], sp["power"]["piid"]
-    cmds.append((siid, piid, 1 if power == "on" else 0))
+    cmds.append((siid, piid, True if power == "on" else False))
     if power == "on":
         siid, piid = sp["mode"]["siid"], sp["mode"]["piid"]
         cmds.append((siid, piid, _MODES.get(mode, 0)))
@@ -281,6 +303,6 @@ def send_miot(host, token, power, mode, temp, fan, device_id=None, spec=None):
     params = [{"did": device_id, "siid": s, "piid": p, "value": v} for s, p, v in cmds]
     try:
         _send_miot_batch(host, token, device_id, params, did_int, dev_ts)
-        return "; ".join(f"siid={s},piid={p} OK" for s, p, _ in cmds)
+        return "已发送"
     except Exception as e:
         return f"错误: {e}"
