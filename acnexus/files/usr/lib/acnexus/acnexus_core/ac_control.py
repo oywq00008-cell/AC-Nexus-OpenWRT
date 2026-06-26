@@ -102,8 +102,16 @@ def send_ac(power: str, mode: str, temp: int, fan: str, source="手动", mac=Non
     if "xiaomi_cloud" in devs and mac in devs.get("xiaomi_cloud", {}):
         dev = devs["xiaomi_cloud"][mac]
         from acnexus_core.xiaomi_control import send_miot
-        return send_miot(dev.get("host", ""), dev.get("token", ""), power, mode, temp, fan, mac,
+        msg = send_miot(dev.get("host", ""), dev.get("token", ""), power, mode, temp, fan, mac,
                         spec=dev.get("miot_spec"))
+        # 统一日志格式（与博联路径一致）
+        if msg and not msg.startswith("["):
+            now = datetime.now()
+            label = {"手动": "手动", "定时": "定时", "自动": "自动调温"}.get(source, source)
+            if power == "on":
+                return f"[{now:%H:%M}] {label}开机 → {MODE_KEYS.get(mode, mode)} {temp}°C"
+            return f"[{now:%H:%M}] {label}关机"
+        return msg
     
     # Broadlink 设备：走 IR 码生成
     dev = devs.get("broadlink", {}).get(mac, {}) or devs.get(mac, {})

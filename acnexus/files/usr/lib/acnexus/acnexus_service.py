@@ -64,6 +64,16 @@ def _process_cmd():
             msg = send_miot(dev.get("host", ""), dev.get("token", ""),
                           cmd["power"], cmd["mode"], cmd["temp"], cmd["fan"], mac,
                           spec=dev.get("miot_spec"))
+            # 统一日志格式
+            from datetime import datetime
+            from acnexus_core.logger import write_log
+            MODES = {"制冷": "cool", "制热": "heat", "除湿": "dry", "送风": "fan", "自动": "auto", "关闭": "off"}
+            MODE_KEYS = {v: k for k, v in MODES.items()}
+            now = datetime.now()
+            if cmd["power"] == "on":
+                write_log("空调", f"[{now:%H:%M}] 手动开机 → {MODE_KEYS.get(cmd['mode'], cmd['mode'])} {cmd['temp']}°C")
+            else:
+                write_log("空调", f"[{now:%H:%M}] 手动关机")
             return {"ok": True, "msg": msg, "mac": mac, "ts": time.time()}
 
         # Broadlink 设备

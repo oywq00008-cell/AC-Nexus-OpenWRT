@@ -79,6 +79,7 @@ def scheduled_job(device_id):
 
     try:
         result = send_ac("on", mode, target, "auto", source="定时", mac=device_id)
+        # send_ac 返回的日志格式已包含 [HH:MM]，直接写入
         write_log("空调", result)
         return result
     except Exception as e:
@@ -99,7 +100,9 @@ def scheduled_off_job(device_id):
         return None
 
     try:
+        now = datetime.now()
         result = send_ac("off", "cool", 26, "auto", source="定时", mac=device_id)
+        # send_ac 返回的日志格式已包含 [HH:MM]，直接写入
         write_log("空调", result)
         return result
     except Exception as e:
