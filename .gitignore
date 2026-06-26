@@ -19,3 +19,5 @@ ipk-build/data/
 ipk-build/debian-binary
 ipk-build/control.tar.gz
 ipk-build/data.tar.gz
+.workbuddy/
+.workbuddy_cache/
