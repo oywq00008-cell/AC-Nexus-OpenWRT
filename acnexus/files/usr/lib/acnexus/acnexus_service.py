@@ -60,9 +60,10 @@ def _process_cmd():
         # MIoT 设备走局域网协议
         if mac in devs.get("xiaomi_cloud", {}):
             dev = devs["xiaomi_cloud"][mac]
+            t = min(max(cmd.get("temp", 26), 16), 30)
             from acnexus_core.xiaomi_control import send_miot
             msg = send_miot(dev.get("host", ""), dev.get("token", ""),
-                          cmd["power"], cmd["mode"], cmd["temp"], cmd["fan"], mac,
+                          cmd["power"], cmd["mode"], t, cmd["fan"], mac,
                           spec=dev.get("miot_spec"))
             # 统一日志格式
             from datetime import datetime
@@ -71,7 +72,7 @@ def _process_cmd():
             MODE_KEYS = {v: k for k, v in MODES.items()}
             now = datetime.now()
             if cmd["power"] == "on":
-                write_log("空调", f"[{now:%H:%M}] 手动开机 → {MODE_KEYS.get(cmd['mode'], cmd['mode'])} {cmd['temp']}°C")
+                write_log("空调", f"[{now:%H:%M}] 手动开机 → {MODE_KEYS.get(cmd['mode'], cmd['mode'])} {t}°C")
             else:
                 write_log("空调", f"[{now:%H:%M}] 手动关机")
             return {"ok": True, "msg": msg, "mac": mac, "ts": time.time()}
@@ -177,8 +178,18 @@ def _bg_refresh_typhoon():
         pass
 
 def refresh_weather():
-    """启动时同步拉取一次（阻塞，确保启动就有数据）"""
+    """启动时拉取天气：如果 init() 已写入有效缓存（60s 内）则跳过"""
     global last_weather
+    cache = "/tmp/acnexus_weather.json"
+    if os.path.exists(cache):
+        try:
+            with open(cache) as f:
+                d = json.load(f)
+            if d.get("ts", 0) > time.time() - 60:
+                last_weather = time.time()
+                return
+        except Exception:
+            pass
     _bg_refresh_weather()
     last_weather = time.time()
 

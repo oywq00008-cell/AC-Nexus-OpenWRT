@@ -55,12 +55,14 @@ def fetch_weather():
     2. 用户未显式选（默认 baidu + provider_set=False）→ 百度失败回落和风
     3. 用户选和风（weather_provider=qweather）→ 直接和风
     4. 双源都失败 → 兜底用 _last_weather 旧缓存（10min 内不至于"完全没数据"）
-    5. 拉到新数据立即 _set_last_weather（weather_loop 调用方负责）
+    5. 拉到新数据立即更新 _last_weather
     """
+    global _last_weather
     provider = _cfg.config.get("weather_provider", "baidu")
     if provider == "baidu":
         result = _fetch_weather_baidu()
         if result is not None:
+            _last_weather = result
             return result
         # 百度失败
         if _cfg.config.get("weather_provider_set", False):
@@ -69,11 +71,13 @@ def fetch_weather():
         # 未显式选 → 回落和风
         result = _fetch_weather_qweather()
         if result is not None:
+            _last_weather = result
             return result
     else:
         # provider == qweather → 直接和风
         result = _fetch_weather_qweather()
         if result is not None:
+            _last_weather = result
             return result
     # 兜底：双源都失败 → 用旧缓存（哪怕过期 30min 也比"完全没数据"好）
     has_baidu = bool(_cfg.config.get("baidu_key"))

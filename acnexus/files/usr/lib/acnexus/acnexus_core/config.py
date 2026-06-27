@@ -213,6 +213,12 @@ def init(api_key=None, qw_host=None, location=None, brand=None):
         w = fetch_weather()
         if w and w.get("temp"):
             _cached_temp = float(w["temp"])
+            # 同时写文件缓存，避免 acnexus_service.py 启动时重复拉取
+            import json as _json, os as _os, time as _time
+            _tmp = "/tmp/acnexus_weather.json.tmp"
+            with open(_tmp, "w") as f:
+                _json.dump({"ts": _time.time(), "data": w}, f)
+            _os.rename(_tmp, "/tmp/acnexus_weather.json")
     except Exception as e:
         print(f"[init] 启动拉天气失败: {e}")
 

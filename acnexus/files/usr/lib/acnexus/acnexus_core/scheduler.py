@@ -13,6 +13,7 @@ from acnexus_core.logger import write_log, get_last_ac_state
 
 _sched_lock = threading.RLock()
 _sched_paused = False
+_last_sched_sig = None  # 调度配置签名，用于变更检测
 
 
 def pause_scheduler():
@@ -158,8 +159,31 @@ def _scheduled_off_wrapper(device_id, days):
 
 # ── 任务注册 ──
 
+def _compute_sched_sig():
+    """计算当前调度配置签名。签名相同时跳过重建，避免 every(N).hours 计时被重置。"""
+    import json as _json
+    templates = _cfg.config.get("schedule_templates", {}) or {}
+    if not isinstance(templates, dict):
+        templates = {}
+    sig = {}
+    for provider, device_id, dev in _iter_all_devices():
+        tmpl_name = dev.get("active_template", "")
+        sig[device_id] = {
+            "schedule_enabled": dev.get("schedule_enabled", False),
+            "auto_adjust": dev.get("auto_adjust", False),
+            "active_template": tmpl_name,
+            "tmpl_hash": _json.dumps(templates.get(tmpl_name, {}), sort_keys=True, default=str),
+        }
+    return _json.dumps(sig, sort_keys=True, ensure_ascii=False, default=str)
+
+
 def register_all_jobs():
+    global _last_sched_sig
     with _sched_lock:
+        sig = _compute_sched_sig()
+        if sig == _last_sched_sig:
+            return
+        _last_sched_sig = sig
         sch.clear()
         templates = _cfg.config.get("schedule_templates", {}) or {}
         if not isinstance(templates, dict):

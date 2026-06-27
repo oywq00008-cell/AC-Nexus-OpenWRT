@@ -85,7 +85,9 @@ function m.on_commit(self)
 
     for _, dev in pairs(uci_devs) do
         local mac = dev.mac
-        if mac then
+        -- 过滤空 mac 占位模板（UCI @device[0] 的 mac=''），不同步到运行时 config.json
+        -- 与 acnexus_api.py 的 _uci_set_device 守卫对齐（Python: if not mac: return）
+        if mac and mac ~= "" then
             local existing = cfg.devices.broadlink[mac] or {}
             if not existing.name or existing.name == "" then
                 existing.name = dev.name or existing.model or mac
@@ -104,7 +106,15 @@ function m.on_commit(self)
     local tmp_path = cfg_path .. ".tmp"
     local out = io.open(tmp_path, "w")
     if out then
-        out:write(cjson.stringify(cfg, true))
+        local s = cjson.stringify(cfg, true)
+        -- 修复 Lua cjson 将空 table {} 序列化为 [] 的问题
+        -- 与 controller/acnexus.lua 的 write_cfg 后处理对齐
+        local devs = cfg.devices or {}
+        for provider in pairs(devs) do
+            s = s:gsub('("' .. provider .. '"%s*:%s*)%[%]', '%1{}')
+        end
+        s = s:gsub('("schedule_templates"%s*:%s*)%[%]', '%1{}')
+        out:write(s)
         out:close()
         os.rename(tmp_path, cfg_path)
     end

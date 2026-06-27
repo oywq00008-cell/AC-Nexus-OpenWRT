@@ -253,8 +253,10 @@ if cmd == "status" or cmd == "refresh":
 
         if w:
             try:
-                with open(weather_cache, "w") as f:
+                tmp = weather_cache + ".tmp"
+                with open(tmp, "w") as f:
                     json.dump({"ts": time.time(), "data": w}, f)
+                os.rename(tmp, weather_cache)
             except:
                 pass
             result["weather"] = {"temp": str(w.get("temp", "--")),
@@ -387,8 +389,10 @@ elif cmd == "discover":
                     uci_show = subprocess.run(['uci', 'show', 'acnexus'], capture_output=True, text=True).stdout
                     section_name = None
                     for line in uci_show.splitlines():
-                        if d["mac"] in line and ".mac=" in line:
-                            section_name = line.split(".mac=")[0]; break
+                        if ".mac=" in line:
+                            val = line.split(".mac=")[-1].strip().strip("'")
+                            if val == d["mac"]:
+                                section_name = line.split(".mac=")[0]; break
                     if not section_name:
                         subprocess.run(['uci', 'add', 'acnexus', 'device'], capture_output=True)
                         section_name = 'acnexus.@device[-1]'

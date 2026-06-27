@@ -335,6 +335,23 @@ function delete_device(cmd)
     cfg.devices[provider][mac] = nil
     if cfg.current_device_mac == mac then cfg.current_device_mac = "" end
     write_cfg(cfg)
+
+    -- 同步删除 UCI 中的对应 @device 节，防止 CBI 保存时设备"复活"
+    -- 参考 discover 命令的 UCI 清理逻辑；空 mac 不删（保留占位模板）
+    if mac and mac ~= "" then
+        local p = io.popen("uci show acnexus 2>/dev/null")
+        local uci_out = p and p:read("*a") or ""
+        if p then p:close() end
+        for line in uci_out:gmatch("[^\n]+") do
+            local sec, val = line:match("^(acnexus%.@device%[%d+])%.mac='([^']*)'$")
+            if sec and val == mac then
+                os.execute("uci delete " .. sec .. " 2>/dev/null")
+            end
+        end
+        os.execute("uci commit acnexus 2>/dev/null")
+        os.execute("rm -f /tmp/luci-indexcache* 2>/dev/null")
+    end
+
     luci.http.write(cjson.stringify({ok = true}))
 end
 
