@@ -2,7 +2,7 @@
 
 # AC-Nexus-OpenWRT
 
-> AC-Nexus rewritten specifically for OpenWRT routers — all major features preserved with extreme lightweight design, re-engineered for low-performance routers. Fully automatic AC control plugin. Supports Broadlink RM IR remotes and all Xiaomi MIoT ecosystem smart IR remotes. Auto weather fetching, intelligent storm wind-speed + distance shutdown, 24/7 unattended operation, automatic on/off and temperature adjustment based on outdoor conditions.
+> AC-Nexus rewritten specifically for OpenWRT routers — all major features preserved with extreme lightweight design, re-engineered for low-performance routers. Fully automatic AC control plugin. Supports Broadlink RM IR remotes and all Xiaomi Mijia MIoT ecosystem smart IR remotes. Auto weather fetching, intelligent storm wind-speed + distance shutdown, 24/7 unattended operation, automatic on/off and temperature adjustment based on outdoor conditions.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenWRT](https://img.shields.io/badge/OpenWRT-21%2B-blue.svg)]()
@@ -15,7 +15,7 @@
 - 🌀 **Storm Auto-Protection** — 3-tier wind-speed/distance threshold: super typhoon 100km / typhoon 70km / default 50km, auto-shutdown + schedule pause
 - ⏰ **Multi-Group Schedule Templates** — Separate weekday/weekend schedules with multiple time slots
 - 🌡️ **Temperature Rules** — Auto-select target temp/mode based on outdoor temperature
-- 🏷️ **Multi-Device Management** — Broadlink RM / Xiaomi AC Partner / Xiaomi IR Remote, auto-dedup, custom nicknames
+- 🏷️ **Multi-Device Management** — Broadlink RM / Xiaomi AC Partner / Xiaomi Mijia IR Remote, auto-dedup, custom nicknames
 - 🔌 **Xiaomi MIoT Full Support** — OAuth QR login, auto device list, per-model siid/piid online matching, 3400+ model local index
 - 🛡️ **Built-in Core Libs** — hvac_ir, broadlink, schedule, pyaes all bundled, zero pip dependencies
 - 📥 **Log Download** — Per-day Markdown archives, one-click download from browser
@@ -68,6 +68,7 @@ Open `http://your-router-ip/cgi-bin/luci/admin/services/acnexus`
 ## 🎛️ Supported Brands
 
 Gree, Midea, Hualing, Xiaomi, Haier, Hisense, Hitachi, Daikin, Mitsubishi, Panasonic, Fujitsu, AUX, Ballu, Carrier, Hyundai, Fuego
+> 💡 **xiaomi Mijia IR Remote Users**: IR remote controls that connect directly to Mi Home come with a massive official code library; simply link your air conditioner within the Mi Home app. Since the plugin operates via the MIoT protocol, it is not restricted by the brand list mentioned above.
 
 ## 🔗 Sister Project
 
