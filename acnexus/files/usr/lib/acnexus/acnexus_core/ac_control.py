@@ -16,6 +16,18 @@ FANS = {"自动": "auto", "1 档": "1", "2 档": "2", "3 档": "3"}
 MODE_KEYS = {v: k for k, v in MODES.items()}
 
 
+def _device_tag(mac):
+    """生成 markdown 安全的设备标签：【设备名|MAC】，用于按设备隔离日志。
+    使用全角括号避免与 markdown 参考链接语法 [name][mac] 冲突。"""
+    name = mac[:8]
+    devs = _cfg.config.get("devices", {})
+    for provider, provider_devs in devs.items():
+        if isinstance(provider_devs, dict) and mac in provider_devs:
+            name = provider_devs[mac].get("name", mac[:8])
+            break
+    return f"【{name}|{mac}】"
+
+
 def _get_primary_ip():
     """获取本机主网卡 IP（能路由到外网的那张）"""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -96,7 +108,8 @@ def send_ac(power: str, mode: str, temp: int, fan: str, source="手动", mac=Non
        mac: 设备 MAC/DID，不传则用当前选中设备"""
     if not mac:
         mac = _cfg.config.get("current_device_mac", "")
-    
+    tag = _device_tag(mac)
+
     # MIoT 设备（米家MIoT红外遥控器）：走局域网协议
     devs = _cfg.config.get("devices", {})
     if "xiaomi_cloud" in devs and mac in devs.get("xiaomi_cloud", {}):
@@ -109,8 +122,8 @@ def send_ac(power: str, mode: str, temp: int, fan: str, source="手动", mac=Non
             now = datetime.now()
             label = {"手动": "手动", "定时": "定时", "自动": "自动调温"}.get(source, source)
             if power == "on":
-                return f"[{now:%H:%M}] {label}开机 → {MODE_KEYS.get(mode, mode)} {temp}°C"
-            return f"[{now:%H:%M}] {label}关机"
+                return f"{tag}[{now:%H:%M}] {label}开机 → {MODE_KEYS.get(mode, mode)} {temp}°C"
+            return f"{tag}[{now:%H:%M}] {label}关机"
         return msg
     
     # Broadlink 设备：走 IR 码生成
@@ -164,11 +177,11 @@ def send_ac(power: str, mode: str, temp: int, fan: str, source="手动", mac=Non
     label = {"手动": "手动", "定时": "定时", "自动": "自动调温"}.get(source, source)
     if power == "on":
         if source == "自动":
-            return f"[{now:%H:%M}] 自动调温 → {MODE_KEYS.get(mode, mode)} {temp}°C"
-        return f"[{now:%H:%M}] {label}开机 → {MODE_KEYS.get(mode, mode)} {temp}°C"
+            return f"{tag}[{now:%H:%M}] 自动调温 → {MODE_KEYS.get(mode, mode)} {temp}°C"
+        return f"{tag}[{now:%H:%M}] {label}开机 → {MODE_KEYS.get(mode, mode)} {temp}°C"
     if source == "自动":
-        return f"[{now:%H:%M}] 自动关机"
-    return f"[{now:%H:%M}] {label}关机"
+        return f"{tag}[{now:%H:%M}] 自动关机"
+    return f"{tag}[{now:%H:%M}] {label}关机"
 
 
 def decide_ac(outdoor, mac=None):

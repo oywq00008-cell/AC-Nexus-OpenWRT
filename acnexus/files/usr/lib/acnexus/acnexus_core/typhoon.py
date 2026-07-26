@@ -412,7 +412,7 @@ def judge_and_shutdown(write_log_func, ty_alert_muted=False, ty_ac_off_sent=Fals
                     continue
                 try:
                     send_ac("off", "cool", 26, "auto", source="台风", mac=mac)
-                    write_log_func("空调", f"[{datetime.now():%H:%M}] {off_reason} → [{name}] 已自动关机")
+                    write_log_func("空调", f"[{datetime.now():%H:%M}] {off_reason} → 【{name}|{mac}】 已自动关机")
                     off_count += 1
                 except Exception as e:
                     write_log_func("系统", f"台风关机失败 [{name}]: {e}")

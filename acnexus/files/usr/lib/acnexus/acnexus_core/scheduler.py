@@ -94,7 +94,7 @@ def scheduled_off_job(device_id):
     if not _device_online(provider, device_id):
         write_log("系统", f"⏰ [{name}] 定时关机 → 设备离线，跳过")
         return None
-    state = get_last_ac_state()
+    state = get_last_ac_state(device_id)
     if state["power"] == "off":
         return None
     if _sched_paused:
@@ -112,19 +112,22 @@ def scheduled_off_job(device_id):
 
 
 def auto_adjust_job(device_id):
+    """每2小时自动调温：读日志判状态 → 跑规则 → 温度无变化则跳过。
+    自动调温自己关的空调，升温后需要能重新开机（state['source']=='auto' 时复开）。"""
     provider, dev = _find_device(device_id)
     name = dev.get("name", device_id[:8])
     if not _device_online(provider, device_id):
-        write_log("系统", f"🔄 [{name}] 自动调温 → 设备离线，跳过")
+        write_log("系统", f"🔄 【{name}|{device_id}】 自动调温 → 设备离线，跳过")
         return
-    state = get_last_ac_state()
-    if state["power"] == "off":
+    state = get_last_ac_state(device_id)
+    # 默认返回 off（无 source）→ 视为非自动关机，尊重、不自动开机
+    if state["power"] == "off" and state.get("source") != "auto":
         return
 
     if _cfg._cached_temp is None:
         w = fetch_weather()
         if not w:
-            write_log("系统", f"🔄 [{name}] 自动调温: 天气获取失败，跳过")
+            write_log("系统", f"🔄 【{name}|{device_id}】 自动调温: 天气获取失败，跳过")
             return
         outdoor = float(w["temp"])
     else:
@@ -132,13 +135,17 @@ def auto_adjust_job(device_id):
 
     target, mode = decide_ac(outdoor, device_id)
     if mode == "off":
-        write_log("空调", send_ac("off", "cool", 26, "auto", source="自动", mac=device_id))
+        # 规则要求关机：仅当当前开着时才发关机指令
+        if state["power"] == "on":
+            write_log("空调", send_ac("off", "cool", 26, "auto", source="自动", mac=device_id))
         return
 
-    if state["mode"] == mode and state["temp"] == target:
-        write_log("空调", f"[{datetime.now():%H:%M}] [{name}] 自动调温 → 不更改温度")
+    # 规则要求开机（或保持）
+    if state["power"] == "on" and state["mode"] == mode and state["temp"] == target:
+        write_log("空调", f"【{name}|{device_id}】[{datetime.now():%H:%M}] 自动调温 → 不更改温度")
         return
-
+    # 当前关着且非自动调温所关（手动/定时关机）→ 尊重，不自动开机
+    # 其余：开着但参数变了 / 或自动调温自己关的 → 发送开机
     try:
         write_log("空调", send_ac("on", mode, target, "auto", source="自动", mac=device_id))
     except Exception as e:

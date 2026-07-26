@@ -219,7 +219,7 @@ if cmd == "status" or cmd == "refresh":
     # 最近状态
     try:
         from acnexus_core.logger import get_last_ac_state
-        state = get_last_ac_state()
+        state = get_last_ac_state(current_mac)
         result["state"] = {"power": state.get("power","off"), "mode": state.get("mode","cool"),
                            "temp": state.get("temp",26), "fan": state.get("fan","auto"),
                            "last_action": state.get("raw","")}

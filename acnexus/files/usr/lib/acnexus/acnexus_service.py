@@ -35,6 +35,16 @@ def _get_broadlink_device(mac, host):
     _cached_devices[mac] = d
     return d
 
+def _svc_tag(cfg, mac):
+    """生成 markdown 安全设备标签：【设备名|MAC】，用于按设备隔离日志。"""
+    name = mac[:8]
+    for provider, provider_devs in (cfg.get("devices") or {}).items():
+        if isinstance(provider_devs, dict) and mac in provider_devs:
+            name = provider_devs[mac].get("name", mac[:8])
+            break
+    return f"【{name}|{mac}】"
+
+
 def _process_cmd():
     """处理一条命令，返回结果 dict"""
     try:
@@ -53,6 +63,7 @@ def _process_cmd():
 
     devs = cfg.get("devices", {})
     dev = devs.get("broadlink", {}).get(mac) or {}
+    tag = _svc_tag(cfg, mac)
     host = dev.get("host", "")
     brand = dev.get("brand", "gree") if dev else "gree"
 
@@ -72,9 +83,9 @@ def _process_cmd():
             MODE_KEYS = {v: k for k, v in MODES.items()}
             now = datetime.now()
             if cmd["power"] == "on":
-                write_log("空调", f"[{now:%H:%M}] 手动开机 → {MODE_KEYS.get(cmd['mode'], cmd['mode'])} {t}°C")
+                write_log("空调", f"{tag}[{now:%H:%M}] 手动开机 → {MODE_KEYS.get(cmd['mode'], cmd['mode'])} {t}°C")
             else:
-                write_log("空调", f"[{now:%H:%M}] 手动关机")
+                write_log("空调", f"{tag}[{now:%H:%M}] 手动关机")
             return {"ok": True, "msg": msg, "mac": mac, "ts": time.time()}
 
         # Broadlink 设备
@@ -136,9 +147,9 @@ def _process_cmd():
         MODE_KEYS = {v: k for k, v in MODES.items()}
         now = datetime.now()
         if cmd["power"] == "on":
-            msg = f"[{now:%H:%M}] 手动开机 → {MODE_KEYS.get(cmd['mode'], cmd['mode'])} {t}°C"
+            msg = f"{tag}[{now:%H:%M}] 手动开机 → {MODE_KEYS.get(cmd['mode'], cmd['mode'])} {t}°C"
         else:
-            msg = f"[{now:%H:%M}] 手动关机"
+            msg = f"{tag}[{now:%H:%M}] 手动关机"
 
         # 写日志
         from acnexus_core.logger import write_log
