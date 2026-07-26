@@ -1,6 +1,6 @@
 # 📖 功能详情 (Feature Reference)
 
-> **版本**: v3.1
+> **版本**: v5.0.2
 > **范围**: AC-Nexus-OpenWRT OpenWRT 路由器端插件
 > **目标读者**: 想深入了解每个功能的工作原理 / 配置项 / 边界条件的用户
 
@@ -9,7 +9,7 @@
 ## 目录
 
 1. [天气数据（双源 + 智能回退）](#1-天气数据)
-2. [台风监测（< 100km 强制关空调）](#2-台风监测)
+2. [台风监测（三级判定自动关空调）](#2-台风监测三级判定自动关空调)
 3. [定时任务（开机/关机/规则）](#3-定时任务)
 4. [自动调温（2h 相对间隔）](#4-自动调温)
 5. [UCI 配置双向同步](#5-uci-配置双向同步)
@@ -81,7 +81,7 @@ fetch_weather() 决策树:
 
 ---
 
-## 2. 台风监测（< 100km 强制关空调）
+## 2. 台风监测（三级判定自动关空调）
 
 ### 2.1 数据源
 
@@ -112,28 +112,28 @@ _ty_cache: list = [
 ### 2.3 拦截链（核心安全策略）
 
 ```
-触发场景 + distance 检查:
+触发场景 + 台风威胁判定 (judge_and_shutdown 按 typhoon.py 三级逻辑):
 
 ┌─────────────────────────────────────────────────────┐
 │ 30min 台风巡检 (_typhoon_loop)                       │
-│   min_dist = calc_distance(loc, storm.loc)          │
-│   IF min_dist < 100 AND typhoon_ac_off=True:         │
+│   min_dist = calc_distance(loc, storm.loc)  # 取最近威胁气旋；三级: 强台风≥41m/s&<100km / 台风≥33m/s&<70km / 其他气旋<50km，热带低压跳过          │
+│   IF 满足任一级关条件 AND typhoon_ac_off=True:         │
 │     → 强制发关 ❌  (不查 power, 不查 ty_ac_off_sent)  │
 │   ELSE:                                              │
 │     → 跳过                                           │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
-│ 定时开机 (scheduled_job at "12:00")                  │
-│   IF distance < 100:                                │
+│ 定时开机 (scheduled_job)                             │
+│   IF 处于台风威胁圈 (任一级阈值内):                                │
 │     → 跳过 (信任 30min 巡检已强制关过)                │
 │   ELSE:                                              │
 │     → 正常跑发码                                    │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
-│ 定时关机 (scheduled_off_job at "22:00")              │
-│   IF distance < 100:                                │
+│ 定时关机 (scheduled_off_job)                         │
+│   IF 处于台风威胁圈:                                │
 │     → 跳过 (避免和台风抢发)                          │
 │   ELSE:                                              │
 │     → 正常跑发关                                    │
@@ -141,7 +141,7 @@ _ty_cache: list = [
 
 ┌─────────────────────────────────────────────────────┐
 │ 自动调温 (auto_adjust_job every 2h)                  │
-│   IF distance < 100:                                │
+│   IF 处于台风威胁圈:                                │
 │     → 跳过 (30min 巡检会强制关, 这里是反行为)        │
 │   ELIF power=off:                                    │
 │     → 跳过 (用户主动关了不打扰)                      │
@@ -161,7 +161,7 @@ _ty_cache: list = [
 ### 2.5 触发发关的条件（AND 全部满足）
 
 1. `typhoon_ac_off=True`（CBI 设置，默认开）
-2. `min_dist < 100`（km）
+2. 满足三级判定之一：强台风(wind≥41m/s 且 dist<100km) / 台风(wind≥33m/s 且 dist<70km) / 其他气旋(dist<50km)；热带低压不触发
 3. 设备在线（`_online_macs` 为空 OR mac 在列表中）
 
 ### 2.6 发关动作
@@ -179,12 +179,12 @@ for mac, dev in devices.items():
 
 | 字段 | 类型 | 默认 | 含义 |
 |------|------|------|------|
-| `typhoon_ac_off` | bool | True | < 100km 时是否自动关 |
+| `typhoon_ac_off` | bool | True | 台风威胁圈内是否自动关（三级判定） |
 | `typhoon_provider` | str | `nmc` | 暂未启用桌面端的 NHC 切换 |
 
 ### 2.8 安全设计意图（用户明确）
 
-> 台风 < 100km 已进入核心圈，外机可能被大风吹倒倒转烧毁
+> 台风进入威胁圈（强台风100km / 台风70km / 其他气旋50km），外机可能被大风吹倒倒转烧毁
 > 雷电也可能对运行中的空调硬件造成雷击损毁
 > 用户若坚持要开空调，必须手动去 CBI 设置页关闭 `typhoon_ac_off`
 > 台风来时沿海城市根本不会热，开风扇足矣
@@ -196,7 +196,7 @@ for mac, dev in devices.items():
 | 30min 拉失败 | `_ty_cache` 保留上次的（不会清空），`typhoon_threat_distance` 仍能用 |
 | 30min 拉成功但无活跃台风 | `_ty_cache = []`，`min_dist` 保持 99999 |
 | 设备离线 | 跳过该设备，但继续发其他在线设备 |
-| 多个台风同时 < 100km | 取最近的一个发关（min 函数）|
+| 多个台风同时进入威胁圈 | 取最近的一个发关（min 函数，按各自等级阈值判定）|
 
 ---
 
@@ -206,9 +206,9 @@ for mac, dev in devices.items():
 
 | 任务 | 触发 | 作用 | 拦截条件 |
 |------|------|------|----------|
-| `scheduled_job` | 每天 `trigger_time` | 开机 + 跑温度规则 | < 100km 跳过 |
-| `scheduled_off_job` | 每天 `off_time` | 发关 | < 100km 跳过 |
-| `auto_adjust_job` | 每 2h 相对间隔 | 跑温度规则（不开机）| < 100km / power=off / mode-temp 一致 跳过 |
+| `scheduled_job` | 每天 `trigger_time` | 开机 + 跑温度规则 | 威胁圈内跳过 |
+| `scheduled_off_job` | 每天 `off_time` | 发关 | 威胁圈内跳过 |
+| `auto_adjust_job` | 每 2h 相对间隔 | 跑温度规则（不开机）| 威胁圈内 / power=off / mode-temp 一致 跳过 |
 
 ### 3.2 schedule 库配置
 
@@ -291,7 +291,7 @@ def scheduler_loop():
 ```
 auto_adjust_job(mac):
   IF device offline: 跳过
-  IF distance < 100km: 跳过 (台风保护)
+  IF 处于台风威胁圈: 跳过 (台风保护)
   IF power=off (读 get_last_ac_state): 跳过 (不打扰用户)
   outdoor = _cfg._cached_temp or fetch_weather()
   IF fetch failed: 跳过
@@ -317,7 +317,7 @@ auto_adjust_job(mac):
 | 跳过原因 | 日志 |
 |----------|------|
 | 设备离线 | `🔄 [客厅] 自动调温 → 设备离线，跳过` |
-| 距离 < 100km | `🔄 [客厅] 自动调温: 风暴 烟花 距 60km，跳过` |
+| 处于台风威胁圈 | `🔄 [客厅] 自动调温: 风暴 烟花 距 60km，跳过` |
 | 空调 power=off | （不写日志）|
 | 天气拉失败 | `🔄 [客厅] 自动调温: 天气获取失败，跳过` |
 | mode/temp 一致 | `[HH:MM] [客厅] 自动调温 → 不更改温度` |
@@ -785,7 +785,7 @@ def send_ac(power, mode, temp, fan, source="手动", mac=None):
 | `baidu_key` | `baidu_key` | `""` | 百度 key |
 | `weather_provider` | `weather_provider` | `baidu` | 天气 provider |
 | `weather_provider_set` | `weather_provider_set` | `0` | 用户是否显式选 |
-| `typhoon_ac_off` | `typhoon_ac_off` | `1` | < 100km 自动关 |
+| `typhoon_ac_off` | `typhoon_ac_off` | `1` | 台风威胁圈内自动关（三级判定） |
 | `typhoon_provider` | `typhoon_provider` | `nmc` | 台风 provider（暂只 NMC）|
 | `location_lat` | `location.lat` | `39.90` | 北京默认 |
 | `location_lon` | `location.lon` | `116.40` | 北京默认 |
