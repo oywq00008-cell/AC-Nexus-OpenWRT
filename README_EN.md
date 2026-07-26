@@ -10,7 +10,7 @@
 
 ## 💡 What is this
 
-**AC-Nexus-OpenWRT** is a fully automatic AC control plugin that runs on your OpenWRT router. Once you plug in a Broadlink RM IR remote (or a Xiaomi Mijia MIoT IR remote) and install this plugin, the router takes over your AC 24/7 — no PC, no babysitting.
+**AC-Nexus-OpenWRT** is a fully automatic AC control plugin that runs on your OpenWRT router. Once you power on a Broadlink RM IR remote (or a Xiaomi Mijia MIoT IR remote) and connect it to your LAN, then install this plugin, the router takes over your AC 24/7 — no PC, no babysitting.
 
 What it does for you:
 
@@ -20,7 +20,7 @@ What it does for you:
 - 🌀 **Storm auto-protection** — Auto-shuts the AC when a typhoon approaches, protecting the outdoor unit from wind damage
 - 🔧 **Web panel control** — Open the router in a browser to remote-control, set rules, and view logs
 
-> In one line: **Plug the IR remote into the router → install this plugin → your AC runs itself (by temperature, by schedule, and auto-off on typhoon).**
+> In one line: **Power on the IR remote and connect it to your LAN → install this plugin → your AC runs itself (by temperature, by schedule, and auto-off on typhoon).**
 
 ## ✨ Features
 
